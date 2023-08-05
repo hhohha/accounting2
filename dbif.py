@@ -3,6 +3,7 @@ from typing import List, Set
 
 import mysql.connector
 
+from enums import ClsType
 from transaction import Transaction
 
 class Table(Enum):
@@ -58,8 +59,8 @@ def remove_string(idx: int) -> None:
 def get_all_classifications(cls_type: int) -> list:
     return sql_query(f'select id, name from classifications where type = {cls_type}')
 
-def get_all_strings(clsId: int) -> list:
-    return sql_query(f'select id, str from strings where cls_id = {clsId}')
+def get_signatures_of_cls_type(cls: ClsType) -> list:
+    return sql_query(f'select c.id, s.str from classifications c, signatures s where s.cls_id = c.id and c.cls_type = {cls.value}')
 
 def add_new_classification(cls_type: int, name: str) -> int:
     newId = get_new_id(Table.CLASSIFICATIONS)

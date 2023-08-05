@@ -63,3 +63,22 @@ class Transaction:
         # TODO: this really needs testing
         t = Transaction(*dbif.get_transactions(f'where t.id = {id}')[0])
         return t
+
+    def find_classifications(self) -> None:
+        self.find_tr_type()
+        self.find_category()
+        self.find_tags()
+
+    def find_tr_type(self) -> None:
+        if self.amount > 0:
+            self.trType = TYPE_CREDIT
+            return
+        for tr_type, signature in
+
+    def find_category(self) -> None:
+        pass
+
+    def find_tags(self) -> None:
+        pass
+
+
