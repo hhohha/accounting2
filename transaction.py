@@ -5,6 +5,11 @@ from dataclasses import dataclass, field
 import datetime
 
 import dbif
+from signatures import signatures
+
+
+TR_TYPE_CREDIT = 5
+CATEGORY_CREDIT = 6
 
 @dataclass
 class Tag:
@@ -40,7 +45,13 @@ class Transaction:
     AV3: Optional[str] = None
     AV4: Optional[str] = None
 
+    signature_data: str = ''
     tags: List[Tag] = field(default_factory=list)
+
+    def __post_init__(self):
+        self.signature_data = ','.join([self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
+                                       self.transactionIdentifier, self.systemDescription, self.senderDescription, self.addresseeDescription,
+                                       self.AV1, self.AV2, self.AV3, self.AV4]).lower()
 
     def save(self) -> int:
         # TODO: transaction should always have: dueDate, amount, category, trType, bank
@@ -71,14 +82,23 @@ class Transaction:
 
     def find_tr_type(self) -> None:
         if self.amount > 0:
-            self.trType = TYPE_CREDIT
+            self.trType = TR_TYPE_CREDIT
             return
-        for tr_type, signature in
+        for trTypeId, signature in signatures.tr_types.items():
+            if signature in self.signature_data:
+                self.trType = trTypeId
+                return
 
     def find_category(self) -> None:
-        pass
+        if self.amount > 0:
+            self.trType = CATEGORY_CREDIT
+            return
+        for categoryId, signature in signatures.categories.items():
+            if signature.lower() in self.signature_data:
+                self.category = categoryId
+                return
 
     def find_tags(self) -> None:
-        pass
-
-
+        for tagId, signature in signatures.tags.items():
+            if signature.lower() in self.signature_data:
+                self.tags.append(Tag(tagId, signature))

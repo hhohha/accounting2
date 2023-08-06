@@ -1,15 +1,16 @@
+from __future__ import annotations
 from enum import Enum
-from typing import List, Set
-
+from typing import Set, TYPE_CHECKING
 import mysql.connector
-
 from enums import ClsType
-from transaction import Transaction
+
+if TYPE_CHECKING:
+    from transaction import Transaction
 
 class Table(Enum):
-    TRANSACTIONS = 'transactions',
-    STRINGS = 'strings'
-    CLASSIFICATIONS = 'classifications',
+    TRANSACTIONS = 'transactions'
+    SIGNATURES = 'signatures'
+    CLASSIFICATIONS = 'classifications'
     TAG_LINKS = 'tag_links'
 
 transactionFields = ["id", "dueDate", "amount", "bank", "category", "trType", "writeOffDate", "toAccount", "toAccountName", "currency", "rate",
@@ -45,22 +46,22 @@ def get_new_id(table: Table) -> int:
     assert isinstance(idx, int) or idx is None, f"invalid new id received from table {table.value}"
     return idx + 1 if isinstance(idx, int) else 0
 
-def add_new_string(clsId: int, string: str) -> int:
-    newId = get_new_id(Table.STRINGS)
-    sql_query(f'insert into strings (id, cls_id, str) values ({newId}, {clsId}, "{string}")')
+def add_new_signature(clsId: int, signature: str) -> int:
+    newId = get_new_id(Table.SIGNATURES)
+    sql_query(f'insert into signatures (id, cls_id, value) values ({newId}, {clsId}, "{signature}")')
     return newId
 
-def change_string(idx: int, string: str) -> None:
-    sql_query(f'update strings set str = "{string}" where id = {idx}')
+def change_signature(idx: int, signature: str) -> None:
+    sql_query(f'update signatures set value = "{signature}" where id = {idx}')
 
-def remove_string(idx: int) -> None:
-    sql_query(f'delete from strings where id = {idx}')
+def remove_signature(idx: int) -> None:
+    sql_query(f'delete from signatures where id = {idx}')
 
-def get_all_classifications(cls_type: int) -> list:
-    return sql_query(f'select id, name from classifications where type = {cls_type}')
+def get_all_classifications(cls: ClsType) -> list:
+    return sql_query(f'select id, name from classifications where type = {cls.value}')
 
 def get_signatures_of_cls_type(cls: ClsType) -> list:
-    return sql_query(f'select c.id, s.str from classifications c, signatures s where s.cls_id = c.id and c.cls_type = {cls.value}')
+    return sql_query(f'select c.id, s.value from classifications c, signatures s where s.cls_id = c.id and c.cls_type = {cls.value}')
 
 def add_new_classification(cls_type: int, name: str) -> int:
     newId = get_new_id(Table.CLASSIFICATIONS)
@@ -109,6 +110,3 @@ def add_tags(trId: int, tagIds: Set[int]) -> None:
 
 def add_tag(trId: int, tagId: int) -> None:
     sql_query(f'insert into tag_links (trans_id, cls_id) values ({trId}, {tagId})')
-
-# def get_all_strings_as_dict
-# def get_cls_as_dict
