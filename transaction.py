@@ -18,35 +18,36 @@ class Tag:
 
 @dataclass
 class Transaction:
-    id: Optional[int]
-    dueDate: datetime.date
-    amount: int
-    bank: str
+    id: Optional[int]           # in table
+    dueDate: datetime.date      # in table
+    amount: int                 # in table
+    bank: str                   # in details
 
     # these may not be present for construction, but must be present for saving
-    category: Optional[int] = None
-    trType: Optional[int] = None
+    category: Optional[int] = None  # in table
+    trType: Optional[int] = None    # in table
 
     # optionals
-    writeOffDate: Optional[datetime.date] = None
-    toAccount: Optional[str] = None
-    toAccountName: Optional[str] = None
-    currency: Optional[str] = None
-    rate:  Optional[float] = None
-    variableSymbol: Optional[str] = None
-    constantSymbol: Optional[str] = None
-    specificSymbol: Optional[str] = None
-    transactionIdentifier: Optional[str] = None
-    systemDescription: Optional[str] = None
-    senderDescription: Optional[str] = None
-    addresseeDescription: Optional[str] = None
-    AV1: Optional[str] = None
-    AV2: Optional[str] = None
-    AV3: Optional[str] = None
-    AV4: Optional[str] = None
+    writeOffDate: Optional[datetime.date] = None    # hidden
+    toAccount: Optional[str] = None                 # in details
+    toAccountName: Optional[str] = None             # in details
+    originalAmount: Optional[int] = None            # hidden
+    currency: Optional[str] = None                  # hidden
+    rate:  Optional[float] = None                   # hidden
+    variableSymbol: Optional[str] = None            # in details
+    constantSymbol: Optional[str] = None            # in details
+    specificSymbol: Optional[str] = None            # in details
+    transactionIdentifier: Optional[str] = None     # hidden
+    systemDescription: Optional[str] = None         # in details
+    senderDescription: Optional[str] = None         # in details
+    addresseeDescription: Optional[str] = None      # in details
+    AV1: Optional[str] = None                       # in details
+    AV2: Optional[str] = None                       # in details
+    AV3: Optional[str] = None                       # in details
+    AV4: Optional[str] = None                       # in details
 
-    signature_data: str = ''
-    tags: List[Tag] = field(default_factory=list)
+    signature_data: str = field(init=False, repr=False)
+    tags: List[Tag] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self):
         self.signature_data = ','.join([self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
