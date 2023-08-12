@@ -6,7 +6,7 @@ import datetime
 
 import dbif
 from signatures import signatures
-
+from utils import valueIfPresent
 
 TR_TYPE_CREDIT = 5
 CATEGORY_CREDIT = 6
@@ -50,9 +50,9 @@ class Transaction:
     tags: List[Tag] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self):
-        self.signature_data = ','.join([self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
+        self.signature_data = ','.join(map(lambda x: x if x is not None else '', [self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
                                        self.transactionIdentifier, self.systemDescription, self.senderDescription, self.addresseeDescription,
-                                       self.AV1, self.AV2, self.AV3, self.AV4]).lower()
+                                       self.AV1, self.AV2, self.AV3, self.AV4])).lower()
 
     def save(self) -> int:
         # TODO: transaction should always have: dueDate, amount, category, trType, bank

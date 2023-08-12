@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Set, TYPE_CHECKING
 import mysql.connector
 from enums import ClsType
+from utils import nameIfPresent, valueIfPresent, valueOrNull
 
 if TYPE_CHECKING:
     from transaction import Transaction
@@ -16,15 +17,6 @@ class Table(Enum):
 transactionFields = ["id", "dueDate", "amount", "bank", "category", "trType", "writeOffDate", "toAccount", "toAccountName", "currency", "rate",
                      "variableSymbol", "constantSymbol", "specificSymbol", "transactionIdentifier", "systemDescription", "senderDescription",
                      "addresseeDescription", "AV1", "AV2", "AV3", "AV4"]
-
-def nameIfPresent(obj, name: str) -> str:
-    return name + ', ' if getattr(obj, name) is not None else ''
-
-def valueIfPresent(obj, name: str) -> str:
-    return f', {str(getattr(obj, name))} ' if getattr(obj, name) is not None else ''
-
-def valueOrNull(obj, name: str) -> str:
-    return f', {str(getattr(obj, name))} ' if getattr(obj, name) is not None else ', null '
 
 def sql_query(sql: str) -> list:
     mydb = mysql.connector.connect(host='localhost', user='honza', password='jejda', database='accounting2')
@@ -61,11 +53,11 @@ def get_all_classifications(cls: ClsType) -> list:
     return sql_query(f'select id, name from classifications where type = {cls.value}')
 
 def get_signatures_of_cls_type(cls: ClsType) -> list:
-    return sql_query(f'select c.id, s.value from classifications c, signatures s where s.cls_id = c.id and c.cls_type = {cls.value}')
+    return sql_query(f'select c.id, s.value from classifications c, signatures s where s.cls_id = c.id and c.type = {cls.value}')
 
-def add_new_classification(cls_type: int, name: str) -> int:
+def add_new_classification(cls: ClsType, name: str) -> int:
     newId = get_new_id(Table.CLASSIFICATIONS)
-    sql_query(f'insert into classifications (id, cls_type, name) values ({newId}, {cls_type}, "{name}")')
+    sql_query(f'insert into classifications (id, type, name) values ({newId}, {cls.value}, "{name}")')
     return newId
 
 def save_new_transaction(t: Transaction) -> int:
@@ -89,10 +81,10 @@ def get_transaction(trId: int) -> Transaction:
     assert len(result) == 1, f"transaction with id {trId} not found"
     return result[0]
 
-def get_transactions(filters: str) -> list:
+def get_transactions(filters: str = '') -> list:
     # TODO: review
-    return sql_query(f'select t.*, x.id tags from transactions t left join (select * from tag_links l, classifications c where l.cls_id = c.id)'
-                     f' x on x.trans_id = t.id {filters} order by t.tdate')
+    # return sql_query(f'select t.*, group_concat(x.id) as tags from transactions t left join (select * from tag_links l, classifications c where l.cls_id = c.id) x on x.trans_id = t.id {filters} group by t.id order by t.due_date')
+    return sql_query(f'select t.* from transactions t {filters} order by t.due_date')
 
 def get_tags(trId: int) -> list:
     return sql_query(f'select distinct cls_id from tag_links where trans_id = {trId}')
