@@ -10,7 +10,7 @@ def get_main_window_layout():
     tags = list(map(lambda t: str(t[0]) + ' ' + t[1], dbif.get_all_classifications(ClsType.TAG)))
 
     ##### main table frame ####################################################
-    transactionsTable = sg.Table(values = [[]], key='table_transactions', headings=['id', 'date', 'amount', 'message', 'type', 'category', 'status'],
+    transactionsTable = sg.Table(values = [[]], key='tbl_transactions', headings=['id', 'date', 'amount', 'message', 'type', 'category', 'status'],
                                  auto_size_columns=False, num_rows=65, col_widths=[5, 12, 10, 100, 20, 20, 10], enable_events = True)
     frameTransactionTable = sg.Frame(layout=[[transactionsTable]], title='Transactions')
 
