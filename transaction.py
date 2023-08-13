@@ -47,7 +47,7 @@ class Transaction:
     AV4: Optional[str] = None                       # in details
 
     signature_data: str = field(init=False, repr=False)
-    tags: List[Tag] = field(default_factory=list, init=False, repr=False)
+    tags: List[int] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self):
         self.signature_data = ','.join(map(lambda x: x if x is not None else '', [self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
@@ -76,6 +76,9 @@ class Transaction:
         t = Transaction(*dbif.get_transactions(f'where t.id = {id}')[0])
         return t
 
+    def load_tags(self) -> None:
+        self.tags = list(map(lambda x: x[0], dbif.get_tags(self.id)))
+
     def find_classifications(self) -> None:
         self.find_tr_type()
         self.find_category()
@@ -99,7 +102,7 @@ class Transaction:
                 self.category = categoryId
                 return
 
-    def find_tags(self) -> None:
-        for tagId, signature in signatures.tags.items():
-            if signature.lower() in self.signature_data:
-                self.tags.append(Tag(tagId, signature))
+#    def find_tags(self) -> None:
+#        for tagId, signature in signatures.tags.items():
+#            if signature.lower() in self.signature_data:
+#                self.tags.append(Tag(tagId, signature))

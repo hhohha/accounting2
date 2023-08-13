@@ -32,7 +32,7 @@ def get_main_window_layout():
     ], title='Transaction details')
 
     frameTags = sg.Frame(layout=[
-        [sg.Table(values=[[]], key='tag_table', headings=['tags'], auto_size_columns=False, num_rows=5, col_widths=[25], enable_events=True)],
+        [sg.Table(values=[[]], key='tbl_detail_tags', headings=['tags'], auto_size_columns=False, num_rows=5, col_widths=[25], enable_events=True)],
         [sg.Button('Remove tag', key='btn_remove_tag'), sg.Button('Add tag', key='btn_add_tag')],
     ], title='Tags')
 
