@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import datetime
 
 import dbif
+from enums import TransactionStatus
 from signatures import signatures
 from utils import valueIfPresent
 
@@ -46,6 +47,7 @@ class Transaction:
     AV3: Optional[str] = None                       # in details
     AV4: Optional[str] = None                       # in details
 
+    status: TransactionStatus = field(default=TransactionStatus.SAVED, init=False, repr=False)
     signature_data: str = field(init=False, repr=False)
     tags: List[int] = field(default_factory=list, init=False, repr=False)
 
@@ -62,11 +64,11 @@ class Transaction:
             dbif.save_modified_transaction(self)
         assert self.id is not None, "transaction id is None after saving"
 
-        tagIds = map(lambda x: x.id, self.tags)
+        #tagIds = map(lambda x: x.id, self.tags)
         tagsIdsFromDB = map(lambda x: x[0], dbif.get_tags(self.id))
 
-        dbif.remove_tags(self.id, set(tagsIdsFromDB) - set(tagIds))
-        dbif.add_tags(self.id, set(tagIds) - set(tagsIdsFromDB))
+        dbif.remove_tags(self.id, set(tagsIdsFromDB) - set(self.tags))
+        dbif.add_tags(self.id, set(self.tags) - set(tagsIdsFromDB))
 
         return self.id
 
@@ -77,12 +79,14 @@ class Transaction:
         return t
 
     def load_tags(self) -> None:
-        self.tags = list(map(lambda x: x[0], dbif.get_tags(self.id)))
+        #self.tags = list(map(lambda x: x[0], dbif.get_tags(self.id)))
+        assert self.id is not None, "cannot get tags from DB: transaction id not saved in DB"
+        self.tags = dbif.get_tags(self.id)
 
     def find_classifications(self) -> None:
         self.find_tr_type()
         self.find_category()
-        self.find_tags()
+        #self.find_tags()
 
     def find_tr_type(self) -> None:
         if self.amount > 0:
@@ -101,6 +105,9 @@ class Transaction:
             if signature.lower() in self.signature_data:
                 self.category = categoryId
                 return
+
+    def delete(self):
+        dbif.remove_transaction(self.id)
 
 #    def find_tags(self) -> None:
 #        for tagId, signature in signatures.tags.items():

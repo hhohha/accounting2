@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import Enum
-from typing import Set, TYPE_CHECKING
+from typing import Set, TYPE_CHECKING, Optional
 import mysql.connector
 from enums import ClsType
 from utils import nameIfPresent, valueIfPresent, valueOrNull
@@ -49,8 +49,9 @@ def change_signature(idx: int, signature: str) -> None:
 def remove_signature(idx: int) -> None:
     sql_query(f'delete from signatures where id = {idx}')
 
-def get_all_classifications(cls: ClsType) -> list:
-    return sql_query(f'select id, name from classifications where type = {cls.value}')
+def get_classifications(cls: Optional[ClsType] = None) -> list:
+    filters = f'where type = {cls.value}' if cls is not None else ''
+    return sql_query(f'select id, name from classifications {filters}')
 
 def get_signatures_of_cls_type(cls: ClsType) -> list:
     return sql_query(f'select c.id, s.value from classifications c, signatures s where s.cls_id = c.id and c.type = {cls.value}')

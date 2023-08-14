@@ -5,9 +5,9 @@ from enums import ClsType
 
 
 def get_main_window_layout():
-    tr_types = list(map(lambda t: str(t[0]) + ' ' + t[1], dbif.get_all_classifications(ClsType.TR_TYPE)))
-    categories = list(map(lambda t: str(t[0]) + ' ' + t[1], dbif.get_all_classifications(ClsType.CATEGORY)))
-    tags = list(map(lambda t: str(t[0]) + ' ' + t[1], dbif.get_all_classifications(ClsType.TAG)))
+    tr_types = list(map(lambda t: t[1], dbif.get_classifications(ClsType.TR_TYPE)))
+    categories = list(map(lambda t: t[1], dbif.get_classifications(ClsType.CATEGORY)))
+    tags = list(map(lambda t: t[1], dbif.get_classifications(ClsType.TAG)))
 
     ##### main table frame ####################################################
     transactionsTable = sg.Table(values = [[]], key='tbl_transactions', headings=['id', 'date', 'amount', 'message', 'type', 'category', 'status'],
@@ -73,7 +73,7 @@ def get_main_window_layout():
         [
             sg.Text('Type:'), sg.Listbox(values=tr_types, key='type_filter', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
             sg.Text('Category:'), sg.Listbox(values=categories, key='cat_filter', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
-            sg.Text('      Tag:'), sg.Listbox(values=tags, key='tag_filter', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED)
+            sg.Text('Tag:'), sg.Listbox(values=tags, key='tag_filter', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED)
         ],
         [sg.Button('Clear filters', key='btn_clear_filters')]
     ], title='Filters')
