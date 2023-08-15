@@ -67,8 +67,13 @@ class Transaction:
         #tagIds = map(lambda x: x.id, self.tags)
         tagsIdsFromDB = map(lambda x: x[0], dbif.get_tags(self.id))
 
-        dbif.remove_tags(self.id, set(tagsIdsFromDB) - set(self.tags))
-        dbif.add_tags(self.id, set(self.tags) - set(tagsIdsFromDB))
+        tagsToRemove = set(tagsIdsFromDB) - set(self.tags)
+        if tagsToRemove:
+            dbif.remove_tags(self.id, tagsToRemove)
+
+        tagsToAdd = set(self.tags) - set(tagsIdsFromDB)
+        if tagsToAdd:
+            dbif.add_tags(self.id, tagsToAdd)
 
         return self.id
 
@@ -81,7 +86,7 @@ class Transaction:
     def load_tags(self) -> None:
         #self.tags = list(map(lambda x: x[0], dbif.get_tags(self.id)))
         assert self.id is not None, "cannot get tags from DB: transaction id not saved in DB"
-        self.tags = dbif.get_tags(self.id)
+        self.tags = list(map(lambda t: t[0], dbif.get_tags(self.id)))
 
     def find_classifications(self) -> None:
         self.find_tr_type()

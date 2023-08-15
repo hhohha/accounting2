@@ -2,7 +2,7 @@ import logging
 from datetime import date
 
 import PySimpleGUI as sg
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Any
 
 import dbif
 from enums import ClsType, TransactionStatus
@@ -12,10 +12,17 @@ from transaction import Transaction
 class Application:
     def __init__(self):
         allClassifications = dbif.get_classifications()
-        self.clsIdToName: Dict[Optional[int], str] = {c[0]: c[1] for c in allClassifications}
+        self.clsIdToName: Dict[Optional[int], str] = {c[0]: c[2] for c in allClassifications}
         self.clsIdToName[None] = 'unknown'
-        self.clsNameToId: Dict[str, int] = {c[1]: c[0] for c in allClassifications}
+
+        self.clsNameToId: Dict[Tuple[ClsType, str], int] = {}
+        for id, clsType, name in allClassifications:
+            self.clsNameToId[(ClsType(clsType), name)] = id
+
         self.transactions: List[Transaction] = []
+        self.window = window
+        self.values: Any = None
+        self.event: Any = None
 
     def transaction_to_table_row(self, transaction: Transaction) -> List[str | int | date | None]:
         try:
@@ -33,10 +40,27 @@ class Application:
 
         return [transaction.id, transaction.dueDate, transaction.amount, description, trTypeName, categoryName, transaction.status.value]
 
+    def recalculate_summaries(self) -> None:
+        pass
+
     def reload_transaction_table(self, reloadFromDB: bool=True) -> None:
+        # if a transaction is selected, remember that row to select it (or the previous one, if deleting) afterward
+        lineSelected: Optional[int] = None
+        if self.values['tbl_transactions']:
+            lineSelected = self.values['tbl_transactions'][0]
+
         if reloadFromDB:
             self.transactions = [Transaction(*t) for t in dbif.get_transactions()]
         window['tbl_transactions'].update(values=[self.transaction_to_table_row(t) for t in self.transactions])
+
+        self.recalculate_summaries()
+
+        # now select the same (or neighboring) row as before
+        if lineSelected is not None:
+            if lineSelected >= len(self.transactions):
+                lineSelected = len(self.transactions) - 1
+            if lineSelected >= 0:
+                window['tbl_transactions'].update(select_rows=[lineSelected])
 
     def show_details(self, transaction: Transaction) -> None:
         window['txt_detail_bank'].update(transaction.bank)
@@ -59,67 +83,91 @@ class Application:
                     'txt_detail_av4']:
             window[key].update('')
 
+    def change_transaction_classification(self, cls: ClsType) -> None:
+        assert cls in [ClsType.TR_TYPE, ClsType.CATEGORY], 'Invalid classification type'
+
+        if (transactionSelected := self.get_selected_transaction()) is None:
+            sg.popup('No transaction selected', title='Error')
+            return
+
+        clsNames = window['type_filter' if cls == ClsType.TR_TYPE else 'cat_filter'].get_list_values()
+
+        event, values = sg.Window(f'Choose new {"type" if cls == ClsType.TR_TYPE else "category"}', [
+            [sg.Listbox(values=clsNames, size=(20, 10), key='cls')],
+            [sg.OK(), sg.Cancel()]
+        ]).read(close=True)
+
+        if event in ['Cancel', None] or len(values['cls']) == 0:
+            return
+
+        typeId = values['cls'][0]
+        newType = self.clsNameToId[(cls, typeId)]
+
+        if cls == ClsType.TR_TYPE:
+            transactionSelected.trType = newType
+        else:
+            transactionSelected.category = newType
+        if transactionSelected.status == TransactionStatus.SAVED:
+            transactionSelected.status = TransactionStatus.MODIFIED
+
+        self.reload_transaction_table(reloadFromDB=False)
+
+    def get_selected_transaction(self) -> Optional[Transaction]:
+        if not self.values['tbl_transactions']:
+            return None
+        lineSelected = self.values['tbl_transactions'][0]
+        return self.transactions[lineSelected]
+
     def run(self) -> None:
         while True:
-            event, values = window.read()
+            self.event, self.values = self.window.read()
 
-            if event in (None, 'exit'):
+            if self.event in (None, 'exit'):
                 break
-            elif event == 'btn_load_data':
+            elif self.event == 'btn_load_data':
                 self.reload_transaction_table()
-            elif event == 'btn_load_from_file':
+            elif self.event == 'btn_load_from_file':
                 # TODO
                 pass
-            elif event == 'tbl_transactions':
-                if not values['tbl_transactions']:
+            elif self.event == 'tbl_transactions':
+                if (transactionSelected := self.get_selected_transaction()) is None:
                     self.clear_details()
                     continue
-                lineSelected = values['tbl_transactions'][0]
-                transactionSelected = self.transactions[lineSelected]
+
                 transactionSelected.load_tags()
                 self.show_details(transactionSelected)
                 window['tbl_detail_tags'].update(values=[self.clsIdToName[tid] for tid in transactionSelected.tags])
-            elif event == 'btn_remove_line':
-                if not values['tbl_transactions']:
+
+            elif self.event == 'btn_remove_line':
+                if (transactionSelected := self.get_selected_transaction()) is None:
                     sg.popup('No transaction selected', title='Error')
                     continue
+
                 if sg.popup_ok_cancel('This will remove the transaction permanently. You sure?', title='Careful!') != 'OK':
                     continue
-                lineSelected = values['tbl_transactions'][0]
-                transactionSelected = self.transactions[lineSelected]
+
                 transactionSelected.delete()
                 self.reload_transaction_table()
-            elif event == 'btn_change_type':
-                if not values['tbl_transactions']:
+
+            elif self.event == 'btn_change_type':
+                self.change_transaction_classification(ClsType.TR_TYPE)
+
+            elif self.event == 'btn_change_category':
+                self.change_transaction_classification(ClsType.CATEGORY)
+
+            elif self.event == 'btn_add_tag':
+                pass
+            elif self.event == 'btn_remove_tag':
+                pass
+            elif self.event == 'btn_save_one':
+                if (transactionSelected := self.get_selected_transaction()) is None:
                     sg.popup('No transaction selected', title='Error')
                     continue
-                lineSelected = values['tbl_transactions'][0]
-                transactionSelected = self.transactions[lineSelected]
-
-                trTypes = window['type_filter'].get_list_values()
-                event, values = sg.Window('Choose new type', [
-                    [sg.Listbox(values=trTypes, size=(20, 10), key='types')],
-                    [sg.OK(), sg.Cancel()]
-                ]).read(close=True)
-
-                if event in ['Cancel', None] or len(values['types']) == 0:
-                    continue
-
-                newType = self.clsNameToId[values['types'][0]]
-
-                transactionSelected.trType = newType
-                if transactionSelected.status == TransactionStatus.SAVED:
-                    transactionSelected.status = TransactionStatus.MODIFIED
-
+                transactionSelected.save()
+                transactionSelected.status = TransactionStatus.SAVED
                 self.reload_transaction_table(reloadFromDB=False)
 
-            elif event == 'btn_change_category':
-                pass
-            elif event == 'btn_add_tag':
-                pass
-            elif event == 'btn_remove_tag':
-                pass
-            elif event == 'btn_save_one':
+            elif self.event == 'btn_hide_line':
                 pass
 
 if __name__ == '__main__':

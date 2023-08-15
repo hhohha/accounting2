@@ -51,7 +51,7 @@ def remove_signature(idx: int) -> None:
 
 def get_classifications(cls: Optional[ClsType] = None) -> list:
     filters = f'where type = {cls.value}' if cls is not None else ''
-    return sql_query(f'select id, name from classifications {filters}')
+    return sql_query(f'select id, type, name from classifications {filters}')
 
 def get_signatures_of_cls_type(cls: ClsType) -> list:
     return sql_query(f'select c.id, s.value from classifications c, signatures s where s.cls_id = c.id and c.type = {cls.value}')
@@ -74,7 +74,7 @@ def save_new_transaction(t: Transaction) -> int:
     return t.id
 
 def save_modified_transaction(t: Transaction) -> None:
-    updatedColumns = [f'{field} = {valueOrNull(t, field)}' for field in transactionFields]
+    updatedColumns = ', '.join([f'{field} = {valueOrNull(t, field, commas=False)}' for field in transactionFields])
     sql_query(f'update transactions set {updatedColumns} where id = {t.id}')
 
 def get_transaction(trId: int) -> Transaction:
@@ -83,9 +83,7 @@ def get_transaction(trId: int) -> Transaction:
     return result[0]
 
 def get_transactions(filters: str = '') -> list:
-    # TODO: review
-    # return sql_query(f'select t.*, group_concat(x.id) as tags from transactions t left join (select * from tag_links l, classifications c where l.cls_id = c.id) x on x.trans_id = t.id {filters} group by t.id order by t.due_date')
-    return sql_query(f'select t.* from transactions t {filters} order by t.due_date')
+    return sql_query(f'select t.* from transactions t {filters} order by t.dueDate')
 
 def get_tags(trId: int) -> list:
     return sql_query(f'select distinct cls_id from tag_links where trans_id = {trId}')

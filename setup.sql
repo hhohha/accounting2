@@ -23,30 +23,30 @@ create table signatures (
 
 create table transactions (
     id int primary key,
-    due_date date not null,
+    dueDate date not null,
     amount float not null,
     bank varchar(20) not null,
     category int,
-    tr_type int,
-    write_off_date date,
-    to_account varchar(20),
-    to_account_name varchar(128),
-    original_amount float,
+    trType int,
+    writeOffDate date,
+    toAccount varchar(20),
+    toAccountName varchar(128),
+    originalAmount float,
     currency varchar(3),
     rate float,
-    variable_symbol varchar(20),
-    constant_symbol varchar(20),
-    specific_symbol varchar(20),
-    transaction_id varchar(64),
-    system_description varchar(128),
-    sender_system_description varchar(128),
-    addressee_description varchar(128),
+    variableSymbol varchar(20),
+    constantSymbol varchar(20),
+    specificSymbol varchar(20),
+    transactionIdentifier varchar(64),
+    systemDescription varchar(128),
+    senderDescription varchar(128),
+    addresseeDescription varchar(128),
     AV1 varchar(128),
     AV2 varchar(128),
     AV3 varchar(128),
     AV4 varchar(128),
     foreign key (category) references classifications(id),
-    foreign key (tr_type) references classifications(id)
+    foreign key (trType) references classifications(id)
 );
 
 create table tag_links (
@@ -66,9 +66,9 @@ insert into classifications values (6, 1, 'household');
 insert into classifications values (7, 1, 'transport');
 insert into classifications values (8, 2, 'kaufland');
 insert into classifications values (9, 2, 'billa');
-insert into transactions (id, due_date, amount, bank, category, tr_type) values (1, '2015-01-01', 100, 'KB', 4, 1);
-insert into transactions (id, due_date, amount, bank, category, tr_type) values (2, '2015-01-02', 200, 'MB', 5, 2);
-insert into transactions (id, due_date, amount, bank, category, tr_type) values (3, '2015-01-03', 300, 'KB', 6, 3);
-insert into transactions (id, due_date, amount, bank, category, tr_type, av1) values (5, '2015-01-05', 500, 'MB', 6, 3, 'some data');
+insert into transactions (id, dueDate, amount, bank, category, trType) values (1, '2015-01-01', 100, 'KB', 4, 1);
+insert into transactions (id, dueDate, amount, bank, category, trType) values (2, '2015-01-02', 200, 'MB', 5, 2);
+insert into transactions (id, dueDate, amount, bank, category, trType) values (3, '2015-01-03', 300, 'KB', 6, 3);
+insert into transactions (id, dueDate, amount, bank, category, trType, av1) values (5, '2015-01-05', 500, 'MB', 6, 3, 'some data');
 insert into tag_links (trans_id, cls_id) values (1, 8);
 insert into tag_links (trans_id, cls_id) values (1, 9);

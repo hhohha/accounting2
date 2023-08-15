@@ -5,9 +5,9 @@ from enums import ClsType
 
 
 def get_main_window_layout():
-    tr_types = list(map(lambda t: t[1], dbif.get_classifications(ClsType.TR_TYPE)))
-    categories = list(map(lambda t: t[1], dbif.get_classifications(ClsType.CATEGORY)))
-    tags = list(map(lambda t: t[1], dbif.get_classifications(ClsType.TAG)))
+    tr_types = list(map(lambda t: t[2], dbif.get_classifications(ClsType.TR_TYPE)))
+    categories = list(map(lambda t: t[2], dbif.get_classifications(ClsType.CATEGORY)))
+    tags = list(map(lambda t: t[2], dbif.get_classifications(ClsType.TAG)))
 
     ##### main table frame ####################################################
     transactionsTable = sg.Table(values = [[]], key='tbl_transactions', headings=['id', 'date', 'amount', 'message', 'type', 'category', 'status'],
