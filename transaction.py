@@ -46,13 +46,14 @@ class Transaction:
     AV2: Optional[str] = None                       # in details
     AV3: Optional[str] = None                       # in details
     AV4: Optional[str] = None                       # in details
+
     tags: Set[int] | str | None = field(default=None, repr=False)
     status: TransactionStatus = field(default=TransactionStatus.SAVED, repr=False)
-
-    signature_data: str = field(init=False, repr=False)
+    signature: str = field(default='', repr=False)
 
     def __post_init__(self):
-        self.signature_data = ','.join(map(lambda x: x if x is not None else '', [self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
+        if not self.signature:
+            self.signature = ','.join(map(lambda x: x if x is not None else '', [self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
                                        self.transactionIdentifier, self.systemDescription, self.senderDescription, self.addresseeDescription,
                                        self.AV1, self.AV2, self.AV3, self.AV4])).lower()
         if self.tags is None:
@@ -81,12 +82,6 @@ class Transaction:
 
         return self.id
 
-    @staticmethod
-    def load_from_DB(id: int) -> Transaction:
-        # TODO: this really needs testing
-        t = Transaction(*dbif.get_transactions(f'where t.id = {id}')[0])
-        return t
-
     #def load_tags(self) -> None:
     #    #self.tags = list(map(lambda x: x[0], dbif.get_tags(self.id)))
     #    assert self.id is not None, "cannot get tags from DB: transaction id not saved in DB"
@@ -102,7 +97,7 @@ class Transaction:
             self.trType = TR_TYPE_CREDIT
             return
         for trTypeId, signature in signatures.tr_types.items():
-            if signature in self.signature_data:
+            if signature in self.signature:
                 self.trType = trTypeId
                 return
 
@@ -111,7 +106,7 @@ class Transaction:
             self.trType = CATEGORY_CREDIT
             return
         for categoryId, signature in signatures.categories.items():
-            if signature.lower() in self.signature_data:
+            if signature.lower() in self.signature:
                 self.category = categoryId
                 return
 
@@ -120,5 +115,5 @@ class Transaction:
 
 #    def find_tags(self) -> None:
 #        for tagId, signature in signatures.tags.items():
-#            if signature.lower() in self.signature_data:
+#            if signature.lower() in self.signature:
 #                self.tags.append(Tag(tagId, signature))

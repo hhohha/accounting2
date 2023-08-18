@@ -64,16 +64,16 @@ def get_main_window_layout():
     ##### filter frame ########################################################
     frameFilter = sg.Frame(layout=[
         [
-            sg.Text('Date from:'), sg.Input(key='date_from'),
-            sg.Text('Date to:'), sg.Input(key='date_to'),
-            sg.Text('Amount min:'), sg.Input(key='amount_min'),
-            sg.Text('Amount max:'), sg.Input(key='amount_max'),
-            sg.Text('Description:'), sg.Input(key='desc')
+            sg.Text('Date from:'), sg.Input(key='filter_date_from'),
+            sg.Text('Date to:'), sg.Input(key='filter_date_to'),
+            sg.Text('Amount min:'), sg.Input(key='filter_amount_min'),
+            sg.Text('Amount max:'), sg.Input(key='filter_amount_max'),
+            sg.Text('Description:'), sg.Input(key='filter_desc')
         ],
         [
-            sg.Text('Type:'), sg.Listbox(values=tr_types, key='type_filter', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
-            sg.Text('Category:'), sg.Listbox(values=categories, key='cat_filter', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
-            sg.Text('Tag:'), sg.Listbox(values=tags, key='tag_filter', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED)
+            sg.Text('Type:'), sg.Listbox(values=tr_types, key='filter_type', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
+            sg.Text('Category:'), sg.Listbox(values=categories, key='filter_category', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
+            sg.Text('Tag:'), sg.Listbox(values=tags, key='filter_tags', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED)
         ],
         [sg.Button('Clear filters', key='btn_clear_filters')]
     ], title='Filters')

@@ -11,7 +11,7 @@ from layout import window
 from transaction import Transaction
 
 # TODOs
-#   load transactions from file
+#   load from mb
 #   filters
 #   signatures in gui
 #   signatures analysis
@@ -35,6 +35,33 @@ class Application:
         self.window = window
         self.values: Any = None
         self.event: Any = None
+
+    def get_filters(self) -> str:
+        print(f'values: {self.values}')
+
+        filters: List[str] = []
+
+        if self.values['filter_date_from']:
+            filters.append(f't.dueDate >= "{self.values["filter_date_from"]}"')
+        if self.values['filter_date_to']:
+            filters.append(f't.dueDate <= "{self.values["filter_date_to"]}"')
+        if self.values['filter_amount_min']:
+            filters.append(f't.amount >= {self.values["filter_amount_min"]}')
+        if self.values['filter_amount_max']:
+            filters.append(f't.amount <= {self.values["filter_amount_max"]}')
+        if self.values['filter_desc']:
+            filters.append(f't.signature like "%{self.values["filter_desc"]}%"')
+        if self.values['filter_type']:
+            idLst = list(map(lambda t: self.clsNameToId[ClsType.TR_TYPE, t], self.values["filter_type"]))
+            filters.append(f't.trType in ({",".join(map(str, idLst))})')
+        if self.values['filter_category']:
+            idLst = list(map(lambda t: self.clsNameToId[ClsType.CATEGORY, t], self.values["filter_category"]))
+            filters.append(f't.category in ({",".join(map(str, idLst))})')
+        if self.values['filter_tags']:
+            idLst = list(map(lambda t: self.clsNameToId[ClsType.TAG, t], self.values["filter_tags"]))
+            filters.append(f'tl.cls_id in ({",".join(map(str, idLst))})')
+
+        return f' where {" and ".join(filters)}' if filters else ''
 
     def transaction_to_table_row(self, transaction: Transaction) -> List[str | int | date | None]:
         try:
@@ -62,7 +89,7 @@ class Application:
             lineSelected = self.values['tbl_transactions'][0]
 
         if reloadFromDB:
-            self.transactions = [Transaction(*t) for t in dbif.get_transactions()]
+            self.transactions = [Transaction(*t) for t in dbif.get_transactions(self.get_filters())]
         self.window['tbl_transactions'].update(values=[self.transaction_to_table_row(t) for t in self.transactions])
 
         self.recalculate_summaries()
@@ -104,7 +131,7 @@ class Application:
             sg.popup('No transaction selected', title='Error')
             return
 
-        clsNames = window['type_filter' if cls == ClsType.TR_TYPE else 'cat_filter'].get_list_values()
+        clsNames = window['filter_type' if cls == ClsType.TR_TYPE else 'filter_category'].get_list_values()
 
         event, values = sg.Window(f'Choose new {"type" if cls == ClsType.TR_TYPE else "category"}', [
             [sg.Listbox(values=clsNames, size=(20, 10), key='cls')],
@@ -131,7 +158,7 @@ class Application:
             sg.popup('No transaction selected', title='Error')
             return
 
-        tags = self.window['tag_filter'].get_list_values()
+        tags = self.window['filter_tags'].get_list_values()
 
         event, values = sg.Window('Choose new tag', [
             [sg.Text('Existing tags'), sg.Listbox(values=tags, size=(30, 30), key='existing_tag')],
@@ -147,7 +174,7 @@ class Application:
             tagId = dbif.add_new_classification(ClsType.TAG, tagValue)
             self.clsIdToName[tagId] = tagValue
             self.clsNameToId[(ClsType.TAG, tagValue)] = tagId
-            self.window['tag_filter'].update(values=list(map(lambda t: t[2], dbif.get_classifications(ClsType.TAG))))
+            self.window['filter_tags'].update(values=list(map(lambda t: t[2], dbif.get_classifications(ClsType.TAG))))
         elif len(values['existing_tag']) > 0:
             tagValue = values['existing_tag'][0]
             tagId = self.clsNameToId[(ClsType.TAG, tagValue)]

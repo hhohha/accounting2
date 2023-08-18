@@ -16,14 +16,14 @@ class Table(Enum):
 
 transactionFields = ["id", "dueDate", "amount", "bank", "category", "trType", "writeOffDate", "toAccount", "toAccountName", "currency", "rate",
                      "variableSymbol", "constantSymbol", "specificSymbol", "transactionIdentifier", "systemDescription", "senderDescription",
-                     "addresseeDescription", "AV1", "AV2", "AV3", "AV4"]
+                     "addresseeDescription", "AV1", "AV2", "AV3", "AV4", "signature"]
 
 def sql_query(sql: str) -> list:
     mydb = mysql.connector.connect(host='localhost', user='honza', password='jejda', database='accounting2')
 
     myCursor = mydb.cursor()
     myCursor.execute(sql)
-    sql = sql.lower()
+    sql = sql.lower().strip()
 
     if sql.startswith('select'):
         return myCursor.fetchall()
@@ -77,15 +77,14 @@ def save_modified_transaction(t: Transaction) -> None:
     updatedColumns = ', '.join([f'{field} = {valueOrNull(t, field, commas=False)}' for field in transactionFields])
     sql_query(f'update transactions set {updatedColumns} where id = {t.id}')
 
-def get_transaction(trId: int) -> Transaction:
-    result = sql_query(f'select * from transactions where id = {trId}')
-    assert len(result) == 1, f"transaction with id {trId} not found"
-    return result[0]
-
 def get_transactions(filters: str = '') -> list:
-    return sql_query(f'select t. *, group_concat(tl.cls_id) from transactions as t left join tag_links as tl on tl.trans_id = t.id '
-                     f'group by t.id {filters} order by t.dueDate')
-    #return sql_query(f'select t.* from transactions t {filters} order by t.dueDate')
+    return sql_query(f'''
+        select t.*, group_concat(tl.cls_id)
+        from transactions as t left join tag_links as tl on tl.trans_id = t.id
+        {filters}
+        group by t.id
+        order by t.dueDate
+    ''')
 
 def get_tags(trId: int) -> list:
     return sql_query(f'select distinct cls_id from tag_links where trans_id = {trId}')

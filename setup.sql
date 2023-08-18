@@ -44,6 +44,7 @@ create table transactions (
     AV2 varchar(128),
     AV3 varchar(128),
     AV4 varchar(128),
+    signature varchar(1024),
     foreign key (category) references classifications(id),
     foreign key (trType) references classifications(id)
 );
