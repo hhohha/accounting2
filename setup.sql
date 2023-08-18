@@ -18,7 +18,6 @@ create table signatures (
     cls_id int,
     value varchar(256),
     foreign key (cls_id) references classifications (id)
-        on delete cascade
 );
 
 create table transactions (

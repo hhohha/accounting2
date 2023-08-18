@@ -5,9 +5,19 @@ import PySimpleGUI as sg
 from typing import Dict, List, Optional, Tuple, Any
 
 import dbif
-from enums import ClsType, TransactionStatus
+from csv_parser import CsvParser
+from enums import ClsType, TransactionStatus, CsvType
 from layout import window
 from transaction import Transaction
+
+# TODOs
+#   load transactions from file
+#   filters
+#   signatures in gui
+#   signatures analysis
+#   backup and restore
+#   gui improvements
+#   summaries
 
 class Application:
     def __init__(self):
@@ -18,6 +28,8 @@ class Application:
         self.clsNameToId: Dict[Tuple[ClsType, str], int] = {}
         for id, clsType, name in allClassifications:
             self.clsNameToId[(ClsType(clsType), name)] = id
+
+        self.csvParser = CsvParser()
 
         self.transactions: List[Transaction] = []
         self.window = window
@@ -51,7 +63,7 @@ class Application:
 
         if reloadFromDB:
             self.transactions = [Transaction(*t) for t in dbif.get_transactions()]
-        window['tbl_transactions'].update(values=[self.transaction_to_table_row(t) for t in self.transactions])
+        self.window['tbl_transactions'].update(values=[self.transaction_to_table_row(t) for t in self.transactions])
 
         self.recalculate_summaries()
 
@@ -60,28 +72,30 @@ class Application:
             if lineSelected >= len(self.transactions):
                 lineSelected = len(self.transactions) - 1
             if lineSelected >= 0:
-                window['tbl_transactions'].update(select_rows=[lineSelected])
+                self.window['tbl_transactions'].update(select_rows=[lineSelected])
 
     def show_details(self, transaction: Transaction) -> None:
-        window['txt_detail_bank'].update(transaction.bank)
-        window['txt_detail_acc_no'].update(transaction.toAccount)
-        window['txt_detail_acc_name'].update(transaction.toAccountName)
-        window['txt_detail_vs'].update(transaction.variableSymbol)
-        window['txt_detail_cs'].update(transaction.constantSymbol)
-        window['txt_detail_ss'].update(transaction.specificSymbol)
-        window['txt_detail_desc'].update(transaction.systemDescription)
-        window['txt_detail_sender_msg'].update(transaction.senderDescription)
-        window['txt_detail_addressee_msg'].update(transaction.addresseeDescription)
-        window['txt_detail_av1'].update(transaction.AV1)
-        window['txt_detail_av2'].update(transaction.AV2)
-        window['txt_detail_av3'].update(transaction.AV3)
-        window['txt_detail_av4'].update(transaction.AV4)
+        self.window['txt_detail_bank'].update(transaction.bank)
+        self.window['txt_detail_acc_no'].update(transaction.toAccount)
+        self.window['txt_detail_acc_name'].update(transaction.toAccountName)
+        self.window['txt_detail_vs'].update(transaction.variableSymbol)
+        self.window['txt_detail_cs'].update(transaction.constantSymbol)
+        self.window['txt_detail_ss'].update(transaction.specificSymbol)
+        self.window['txt_detail_desc'].update(transaction.systemDescription)
+        self.window['txt_detail_sender_msg'].update(transaction.senderDescription)
+        self.window['txt_detail_addressee_msg'].update(transaction.addresseeDescription)
+        self.window['txt_detail_av1'].update(transaction.AV1)
+        self.window['txt_detail_av2'].update(transaction.AV2)
+        self.window['txt_detail_av3'].update(transaction.AV3)
+        self.window['txt_detail_av4'].update(transaction.AV4)
+        self.window['tbl_detail_tags'].update(values=[self.clsIdToName[tid] for tid in transaction.tags])
 
     def clear_details(self) -> None:
         for key in ['txt_detail_bank', 'txt_detail_acc_no', 'txt_detail_acc_name', 'txt_detail_vs', 'txt_detail_cs', 'txt_detail_ss',
                     'txt_detail_desc', 'txt_detail_sender_msg', 'txt_detail_addressee_msg', 'txt_detail_av1', 'txt_detail_av2', 'txt_detail_av3',
                     'txt_detail_av4']:
             window[key].update('')
+            self.window['tbl_detail_tags'].update(values=[])
 
     def change_transaction_classification(self, cls: ClsType) -> None:
         assert cls in [ClsType.TR_TYPE, ClsType.CATEGORY], 'Invalid classification type'
@@ -112,11 +126,49 @@ class Application:
 
         self.reload_transaction_table(reloadFromDB=False)
 
+    def add_tag(self) -> None:
+        if (transactionSelected := self.get_selected_transaction()) is None:
+            sg.popup('No transaction selected', title='Error')
+            return
+
+        tags = self.window['tag_filter'].get_list_values()
+
+        event, values = sg.Window('Choose new tag', [
+            [sg.Text('Existing tags'), sg.Listbox(values=tags, size=(30, 30), key='existing_tag')],
+            [sg.Text('Create a tag'), sg.Input(key='new_tag')],
+            [sg.OK(), sg.Cancel()]
+        ]).read(close=True)
+
+        if event in ['Cancel', None]:
+            return
+
+        if values['new_tag']:
+            tagValue = values['new_tag']
+            tagId = dbif.add_new_classification(ClsType.TAG, tagValue)
+            self.clsIdToName[tagId] = tagValue
+            self.clsNameToId[(ClsType.TAG, tagValue)] = tagId
+            self.window['tag_filter'].update(values=list(map(lambda t: t[2], dbif.get_classifications(ClsType.TAG))))
+        elif len(values['existing_tag']) > 0:
+            tagValue = values['existing_tag'][0]
+            tagId = self.clsNameToId[(ClsType.TAG, tagValue)]
+        else:
+            return
+
+        transactionSelected.tags.add(tagId)
+        if transactionSelected.status == TransactionStatus.SAVED:
+            transactionSelected.status = TransactionStatus.MODIFIED
+        self.reload_transaction_table(reloadFromDB=False)
+
     def get_selected_transaction(self) -> Optional[Transaction]:
         if not self.values['tbl_transactions']:
             return None
-        lineSelected = self.values['tbl_transactions'][0]
-        return self.transactions[lineSelected]
+        lineNo = self.values['tbl_transactions'][0]
+        return self.transactions[lineNo]
+
+    def get_selected_line_no(self) -> Optional[int]:
+        if not self.values['tbl_transactions']:
+            return None
+        return self.values['tbl_transactions'][0]
 
     def run(self) -> None:
         while True:
@@ -126,17 +178,12 @@ class Application:
                 break
             elif self.event == 'btn_load_data':
                 self.reload_transaction_table()
-            elif self.event == 'btn_load_from_file':
-                # TODO
-                pass
             elif self.event == 'tbl_transactions':
                 if (transactionSelected := self.get_selected_transaction()) is None:
                     self.clear_details()
                     continue
 
-                transactionSelected.load_tags()
                 self.show_details(transactionSelected)
-                window['tbl_detail_tags'].update(values=[self.clsIdToName[tid] for tid in transactionSelected.tags])
 
             elif self.event == 'btn_remove_line':
                 if (transactionSelected := self.get_selected_transaction()) is None:
@@ -156,9 +203,28 @@ class Application:
                 self.change_transaction_classification(ClsType.CATEGORY)
 
             elif self.event == 'btn_add_tag':
-                pass
+                self.add_tag()
+
             elif self.event == 'btn_remove_tag':
-                pass
+                if (transactionSelected := self.get_selected_transaction()) is None:
+                    sg.popup('No transaction selected', title='Error')
+                    continue
+
+                if len(self.values['tbl_detail_tags']) == 0:
+                    sg.popup('No tag selected', title='Error')
+                    continue
+
+                lineNo = self.values['tbl_detail_tags'][0]
+                tagName = window['tbl_detail_tags'].get()[lineNo]
+                tagId = self.clsNameToId[(ClsType.TAG, tagName)]
+
+                assert isinstance(transactionSelected.tags, set), "transaction tags are in a wrong format"
+                transactionSelected.tags.remove(tagId)
+
+                if transactionSelected.status == TransactionStatus.SAVED:
+                    transactionSelected.status = TransactionStatus.MODIFIED
+                self.reload_transaction_table(reloadFromDB=False)
+
             elif self.event == 'btn_save_one':
                 if (transactionSelected := self.get_selected_transaction()) is None:
                     sg.popup('No transaction selected', title='Error')
@@ -168,7 +234,33 @@ class Application:
                 self.reload_transaction_table(reloadFromDB=False)
 
             elif self.event == 'btn_hide_line':
-                pass
+                if (lineNo := self.get_selected_line_no()) is None:
+                    sg.popup('No transaction selected', title='Error')
+                    continue
+
+                self.transactions.pop(lineNo)
+                self.reload_transaction_table(reloadFromDB=False)
+            elif self.event == 'btn_load_from_file':
+                event, values = sg.Window('Get file', [
+                    [sg.Text('Data file')],
+                    [sg.Input(key='txt_csv_file'), sg.FileBrowse(initial_folder='/home/honza')],
+                    [sg.Text('Source')],
+                    [sg.Listbox(values=['kb', 'mb'], size=(30, 3), key='lst_source_type')], [sg.OK(), sg.Cancel()]
+                ]).read(close=True)
+
+                if event in ['Cancel', None]:
+                    continue
+                if not values['txt_csv_file']:
+                    sg.popup('No file selected', title='Error')
+                    continue
+                if not values['lst_source_type']:
+                    sg.popup('No source selected', title='Error')
+                    continue
+
+                filename = values['txt_csv_file']
+                sourceType = CsvType(values['lst_source_type'][0])
+                self.transactions = self.csvParser.read_transactions(filename, sourceType)
+                self.reload_transaction_table(reloadFromDB=False)
 
 if __name__ == '__main__':
     Application().run()

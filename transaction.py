@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from dataclasses import dataclass, field
 import datetime
@@ -33,7 +33,7 @@ class Transaction:
     toAccount: Optional[str] = None                 # in details
     toAccountName: Optional[str] = None             # in details
     originalAmount: Optional[int] = None            # hidden
-    currency: Optional[str] = None                  # hidden
+    originalCurrency: Optional[str] = None          # hidden
     rate:  Optional[float] = None                   # hidden
     variableSymbol: Optional[str] = None            # in details
     constantSymbol: Optional[str] = None            # in details
@@ -46,15 +46,19 @@ class Transaction:
     AV2: Optional[str] = None                       # in details
     AV3: Optional[str] = None                       # in details
     AV4: Optional[str] = None                       # in details
+    tags: Set[int] | str | None = field(default=None, repr=False)
+    status: TransactionStatus = field(default=TransactionStatus.SAVED, repr=False)
 
-    status: TransactionStatus = field(default=TransactionStatus.SAVED, init=False, repr=False)
     signature_data: str = field(init=False, repr=False)
-    tags: List[int] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self):
         self.signature_data = ','.join(map(lambda x: x if x is not None else '', [self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
                                        self.transactionIdentifier, self.systemDescription, self.senderDescription, self.addresseeDescription,
                                        self.AV1, self.AV2, self.AV3, self.AV4])).lower()
+        if self.tags is None:
+            self.tags = set()
+        else:
+            self.tags = {int(t) for t in self.tags.split(',')}
 
     def save(self) -> int:
         # TODO: transaction should always have: dueDate, amount, category, trType, bank
@@ -62,11 +66,11 @@ class Transaction:
             self.id = dbif.save_new_transaction(self)
         else:
             dbif.save_modified_transaction(self)
+
         assert self.id is not None, "transaction id is None after saving"
+        assert isinstance(self.tags, set), "transaction tags are not a set"
 
-        #tagIds = map(lambda x: x.id, self.tags)
-        tagsIdsFromDB = map(lambda x: x[0], dbif.get_tags(self.id))
-
+        tagsIdsFromDB = list(map(lambda x: x[0], dbif.get_tags(self.id)))
         tagsToRemove = set(tagsIdsFromDB) - set(self.tags)
         if tagsToRemove:
             dbif.remove_tags(self.id, tagsToRemove)
@@ -83,10 +87,10 @@ class Transaction:
         t = Transaction(*dbif.get_transactions(f'where t.id = {id}')[0])
         return t
 
-    def load_tags(self) -> None:
-        #self.tags = list(map(lambda x: x[0], dbif.get_tags(self.id)))
-        assert self.id is not None, "cannot get tags from DB: transaction id not saved in DB"
-        self.tags = list(map(lambda t: t[0], dbif.get_tags(self.id)))
+    #def load_tags(self) -> None:
+    #    #self.tags = list(map(lambda x: x[0], dbif.get_tags(self.id)))
+    #    assert self.id is not None, "cannot get tags from DB: transaction id not saved in DB"
+    #    self.tags = list(map(lambda t: t[0], dbif.get_tags(self.id)))
 
     def find_classifications(self) -> None:
         self.find_tr_type()

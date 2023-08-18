@@ -83,7 +83,9 @@ def get_transaction(trId: int) -> Transaction:
     return result[0]
 
 def get_transactions(filters: str = '') -> list:
-    return sql_query(f'select t.* from transactions t {filters} order by t.dueDate')
+    return sql_query(f'select t. *, group_concat(tl.cls_id) from transactions as t left join tag_links as tl on tl.trans_id = t.id '
+                     f'group by t.id {filters} order by t.dueDate')
+    #return sql_query(f'select t.* from transactions t {filters} order by t.dueDate')
 
 def get_tags(trId: int) -> list:
     return sql_query(f'select distinct cls_id from tag_links where trans_id = {trId}')

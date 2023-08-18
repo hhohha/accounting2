@@ -9,3 +9,7 @@ class TransactionStatus(Enum):
     NEW = 'new'
     MODIFIED = 'modified'
     SAVED = 'saved'
+
+class CsvType(Enum):
+    KB = 'kb'
+    MB = 'mb'
