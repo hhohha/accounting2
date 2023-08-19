@@ -9,15 +9,16 @@ from csv_parser import CsvParser
 from enums import ClsType, TransactionStatus, CsvType
 from layout import window
 from transaction import Transaction
+from utils import display_amount
+
 
 # TODOs
-#   load from mb
-#   filters
 #   signatures in gui
 #   signatures analysis
 #   backup and restore
 #   gui improvements
 #   summaries
+#   improve filters
 
 class Application:
     def __init__(self):
@@ -77,7 +78,7 @@ class Application:
 
         description = ','.join(filter(lambda f: f is not None, [transaction.AV1, transaction.AV2, transaction.AV3, transaction.AV4])) # type: ignore
 
-        return [transaction.id, transaction.dueDate, transaction.amount, description, trTypeName, categoryName, transaction.status.value]
+        return [transaction.id, transaction.dueDate, display_amount(transaction.amount), description, trTypeName, categoryName, transaction.status.value]
 
     def recalculate_summaries(self) -> None:
         pass
@@ -102,6 +103,7 @@ class Application:
                 self.window['tbl_transactions'].update(select_rows=[lineSelected])
 
     def show_details(self, transaction: Transaction) -> None:
+        self.clear_details()
         self.window['txt_detail_bank'].update(transaction.bank)
         self.window['txt_detail_acc_no'].update(transaction.toAccount)
         self.window['txt_detail_acc_name'].update(transaction.toAccountName)

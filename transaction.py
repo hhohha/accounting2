@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Optional, Set
+from typing import Optional, Set
 
 from dataclasses import dataclass, field
 import datetime
@@ -7,7 +7,6 @@ import datetime
 import dbif
 from enums import TransactionStatus
 from signatures import signatures
-from utils import valueIfPresent
 
 TR_TYPE_CREDIT = 5
 CATEGORY_CREDIT = 6
@@ -49,9 +48,10 @@ class Transaction:
 
     tags: Set[int] | str | None = field(default=None, repr=False)
     status: TransactionStatus = field(default=TransactionStatus.SAVED, repr=False)
-    signature: str = field(default='', repr=False)
+    signature: str = field(default='', init=False, repr=False)
 
     def __post_init__(self):
+        # todo - strip all strings
         if not self.signature:
             self.signature = ','.join(map(lambda x: x if x is not None else '', [self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
                                        self.transactionIdentifier, self.systemDescription, self.senderDescription, self.addresseeDescription,

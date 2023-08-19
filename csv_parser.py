@@ -12,10 +12,35 @@ class CsvParser:
         self.sourceType: Optional[CsvType] = None
         self.transactions: List[Transaction] = []
 
+    def line_to_transaction_mb(self, line: str) -> Optional[Transaction]:
+        fields = list(map(lambda l: l.strip('"'), line.split(self.delimiter)))
+        if len(fields) < 11:
+            logging.warning(f'Line {line} has only {len(fields)} fields, expected 11')
+            return None
+        try:
+            return Transaction(
+                id = None,
+                dueDate = datetime.strptime(fields[0], '%d-%m-%Y').date(),
+                writeOffDate = datetime.strptime(fields[1], '%d-%m-%Y').date() if fields[1] else None,
+                senderDescription = fields[2],
+                addresseeDescription = fields[3],
+                toAccountName=fields[4],
+                toAccount=fields[5],
+                constantSymbol=fields[6],
+                variableSymbol=fields[7],
+                specificSymbol=fields[8],
+                amount=int(fields[9].replace('.', '').replace(',', '').replace(' ', '')),
+                bank='MB',
+                status=TransactionStatus.NEW
+            )
+        except ValueError as e:
+            logging.warning(f'Line {line} cannot be parsed: {e}')
+            return None
+
     def line_to_transaction_kb(self, line: str) -> Optional[Transaction]:
         fields = list(map(lambda l: l.strip('"'), line.split(self.delimiter)))
         if len(fields) < 19:
-            logging.warning(f'Line {line} has only {len(fields)} fields, expected 16')
+            logging.warning(f'Line {line} has only {len(fields)} fields, expected 19')
             return None
         try:
             return Transaction(
@@ -39,8 +64,6 @@ class CsvParser:
                 AV2 = fields[16],
                 AV3 = fields[17],
                 AV4 = fields[18],
-                category = None,
-                trType = None,
                 bank = 'KB',
                 status = TransactionStatus.NEW
             )
@@ -57,22 +80,29 @@ class CsvParser:
         self.transactions.clear()
         try:
             with open(filename, 'r', encoding='cp1250') as f:
-                rawData = f.read()
-                self.parse_data(rawData)
+                lines = f.readlines()
+                self.parse_data(lines)
                 return self.transactions
         except FileNotFoundError:
             print(f'File {filename} not found')
         return []
 
-    def parse_data(self, rawData: str) -> None:
-        lines = rawData.split('\n')
-
+    def parse_data(self, lines: List[str]) -> None:
         if self.sourceType == CsvType.KB:
-            parse_func = self.line_to_transaction_kb
+            if len(lines) >= 18 and lines[2] == '\n' and lines[16] == '\n':
+                lines = lines[18:]
+                parse_func = self.line_to_transaction_kb
+            else:
+                logging.warning(f'File seems to have an unexpected format')
+                return
         elif self.sourceType == CsvType.MB:
-            parse_func = self.line_to_transaction_mb
+            if len(lines) >= 37 and lines[35] == '\n' and lines[33] == '\n':
+                lines = lines[37:]
+                parse_func = self.line_to_transaction_mb
+            else:
+                logging.warning(f'File seems to have an unexpected format')
+                return
         else:
             assert False, f'Unknown source type: {self.sourceType}'
 
-        self.transactions = [t for t in map(parse_func, lines[1:]) if t is not None]
-
+        self.transactions = [t for t in map(parse_func, lines) if t is not None]

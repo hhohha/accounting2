@@ -1,9 +1,10 @@
 from __future__ import annotations
 from enum import Enum
-from typing import Set, TYPE_CHECKING, Optional
+from typing import Set, TYPE_CHECKING, Optional, List, Tuple
 import mysql.connector
 from enums import ClsType
-from utils import nameIfPresent, valueIfPresent, valueOrNull
+from utils import value_or_null
+from datetime import date
 
 if TYPE_CHECKING:
     from transaction import Transaction
@@ -14,9 +15,11 @@ class Table(Enum):
     CLASSIFICATIONS = 'classifications'
     TAG_LINKS = 'tag_links'
 
-transactionFields = ["id", "dueDate", "amount", "bank", "category", "trType", "writeOffDate", "toAccount", "toAccountName", "currency", "rate",
+transactionFieldsSelect = ["id", "dueDate", "amount", "bank", "category", "trType", "writeOffDate", "toAccount", "toAccountName", "originalCurrency", "rate",
                      "variableSymbol", "constantSymbol", "specificSymbol", "transactionIdentifier", "systemDescription", "senderDescription",
-                     "addresseeDescription", "AV1", "AV2", "AV3", "AV4", "signature"]
+                     "addresseeDescription", "AV1", "AV2", "AV3", "AV4"]
+
+transactionFieldsSave = transactionFieldsSelect + ['signature']
 
 def sql_query(sql: str) -> list:
     mydb = mysql.connector.connect(host='localhost', user='honza', password='jejda', database='accounting2')
@@ -61,25 +64,46 @@ def add_new_classification(cls: ClsType, name: str) -> int:
     sql_query(f'insert into classifications (id, type, name) values ({newId}, {cls.value}, "{name}")')
     return newId
 
+def parse_fields(t: Transaction, fields: List[str]) -> Tuple[str, str]:
+    columnNames: List[str] = []
+    columnValues: List[str] = []
+
+    for field in fields:
+        value = getattr(t, field)
+        if not value:
+            continue
+        elif isinstance(value, str):
+            value = value.strip()
+            if not value:
+                continue
+            value = f'"{value}"'
+        elif isinstance(value, date):
+            value = f'"{value}"'
+        else:
+            value = str(value)
+        columnNames.append(field)
+        columnValues.append(value)
+
+    return ','.join(columnNames), ','.join(columnValues)
+
 def save_new_transaction(t: Transaction) -> int:
     assert t.id is None, "transaction already has an id"
-    assert t.category is not None, "transaction has no category"
-    assert t.trType is not None, "transaction has no type"
 
     t.id = get_new_id(Table.TRANSACTIONS)
-    columnNames = [nameIfPresent(t, field) for field in transactionFields]
-    columnValues = [valueIfPresent(t, field) for field in transactionFields]
+
+    columnNames, columnValues = parse_fields(t, transactionFieldsSave)
+    print(f'QUERY: insert into transactions ({columnNames}) values ({columnValues})')
 
     sql_query(f'insert into transactions ({columnNames}) values ({columnValues})')
     return t.id
 
 def save_modified_transaction(t: Transaction) -> None:
-    updatedColumns = ', '.join([f'{field} = {valueOrNull(t, field, commas=False)}' for field in transactionFields])
+    updatedColumns = ', '.join([f'{field} = {value_or_null(t, field, commas=False)}' for field in transactionFieldsSave])
     sql_query(f'update transactions set {updatedColumns} where id = {t.id}')
 
 def get_transactions(filters: str = '') -> list:
     return sql_query(f'''
-        select t.*, group_concat(tl.cls_id)
+        select {",".join(["t." + field for field in transactionFieldsSelect])}, group_concat(tl.cls_id)
         from transactions as t left join tag_links as tl on tl.trans_id = t.id
         {filters}
         group by t.id

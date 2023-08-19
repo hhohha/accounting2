@@ -1,12 +1,9 @@
 from datetime import date
 
-def nameIfPresent(obj, name: str) -> str:
-    return name + ', ' if getattr(obj, name) is not None else ''
+def display_amount(amount: int) -> str:
+    return f'{amount // 100},{amount % 100:02d}'
 
-def valueIfPresent(obj, name: str) -> str:
-    return f', {str(getattr(obj, name))} ' if getattr(obj, name) is not None else ''
-
-def valueOrNull(obj, name: str, commas: bool = True) -> str:
+def value_or_null(obj, name: str, commas: bool = True) -> str:
     optionalComma = ', ' if commas else ''
     value = getattr(obj, name)
     if value is None:
@@ -16,3 +13,6 @@ def valueOrNull(obj, name: str, commas: bool = True) -> str:
     else:
         strValue = str(value)
     return f'{optionalComma}{strValue}'
+
+
+
