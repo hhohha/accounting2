@@ -17,8 +17,7 @@ from utils import display_amount
 #   signatures analysis
 #   backup and restore
 #   gui improvements
-#   summaries
-#   improve filters
+#   improve filters (credit/debit, clear filters, last month)
 
 class Application:
     def __init__(self):
@@ -64,24 +63,34 @@ class Application:
 
         return f' where {" and ".join(filters)}' if filters else ''
 
-    def transaction_to_table_row(self, transaction: Transaction) -> List[str | int | date | None]:
+    def get_cls_name(self, clsId: int) -> str:
         try:
-            trTypeName = self.clsIdToName[transaction.trType]
+            return self.clsIdToName[clsId]
         except KeyError:
-            trTypeName = 'error'
-            logging.error(f'DB inconsistent: unknown classification: {transaction.trType}')
-        try:
-            categoryName = self.clsIdToName[transaction.category]
-        except KeyError:
-            categoryName = 'error'
-            logging.error(f'DB inconsistent: unknown classification: {transaction.category}')
+            logging.error(f'DB inconsistent: unknown classification: {clsId}')
+            return 'error'
 
+    def transaction_to_table_row(self, transaction: Transaction) -> List[str | int | date | None]:
+        trTypeName = self.get_cls_name(transaction.trType)
+        categoryName = self.get_cls_name(transaction.category)
         description = ','.join(filter(lambda f: f is not None, [transaction.AV1, transaction.AV2, transaction.AV3, transaction.AV4])) # type: ignore
 
         return [transaction.id, transaction.dueDate, display_amount(transaction.amount), description, trTypeName, categoryName, transaction.status.value]
 
     def recalculate_summaries(self) -> None:
-        pass
+        sumDebit, sumCredit = 0, 0
+        for t in self.transactions:
+            if t.amount < 0:
+                sumDebit += t.amount
+            else:
+                sumCredit += t.amount
+        self.window['txt_total_debit'].update(display_amount(sumDebit))
+        self.window['txt_total_credit'].update(display_amount(sumCredit))
+        self.window['txt_total_amount'].update(display_amount(sumCredit + sumDebit))
+        self.window['txt_total_cnt'].update(len(self.transactions))
+
+    def reload_signature_table(self, clsId: int) -> None:
+        self.window['tbl_signatures'].update(values=[self.clsIdToName[tid] for tid in dbif.get_signatures(clsId)])
 
     def reload_transaction_table(self, reloadFromDB: bool=True) -> None:
         # if a transaction is selected, remember that row to select it (or the previous one, if deleting) afterward
@@ -102,27 +111,30 @@ class Application:
             if lineSelected >= 0:
                 self.window['tbl_transactions'].update(select_rows=[lineSelected])
 
-    def show_details(self, transaction: Transaction) -> None:
+    def show_details(self, t: Transaction) -> None:
         self.clear_details()
-        self.window['txt_detail_bank'].update(transaction.bank)
-        self.window['txt_detail_acc_no'].update(transaction.toAccount)
-        self.window['txt_detail_acc_name'].update(transaction.toAccountName)
-        self.window['txt_detail_vs'].update(transaction.variableSymbol)
-        self.window['txt_detail_cs'].update(transaction.constantSymbol)
-        self.window['txt_detail_ss'].update(transaction.specificSymbol)
-        self.window['txt_detail_desc'].update(transaction.systemDescription)
-        self.window['txt_detail_sender_msg'].update(transaction.senderDescription)
-        self.window['txt_detail_addressee_msg'].update(transaction.addresseeDescription)
-        self.window['txt_detail_av1'].update(transaction.AV1)
-        self.window['txt_detail_av2'].update(transaction.AV2)
-        self.window['txt_detail_av3'].update(transaction.AV3)
-        self.window['txt_detail_av4'].update(transaction.AV4)
-        self.window['tbl_detail_tags'].update(values=[self.clsIdToName[tid] for tid in transaction.tags])
+        self.window['txt_detail_bank'].update(t.bank)
+        self.window['txt_detail_acc_no'].update(t.toAccount)
+        self.window['txt_detail_acc_name'].update(t.toAccountName)
+        self.window['txt_detail_vs'].update(t.variableSymbol)
+        self.window['txt_detail_cs'].update(t.constantSymbol)
+        self.window['txt_detail_ss'].update(t.specificSymbol)
+        self.window['txt_detail_desc'].update(t.systemDescription)
+        self.window['txt_detail_sender_msg'].update(t.senderDescription)
+        self.window['txt_detail_addressee_msg'].update(t.addresseeDescription)
+        self.window['txt_detail_av1'].update(t.AV1)
+        self.window['txt_detail_av2'].update(t.AV2)
+        self.window['txt_detail_av3'].update(t.AV3)
+        self.window['txt_detail_av4'].update(t.AV4)
+        self.window['tbl_detail_tags'].update(values=[self.clsIdToName[tid] for tid in t.tags])
+
+        self.window['txt_detail_category'].update(self.get_cls_name(t.category))
+        self.window['txt_detail_type'].update(self.get_cls_name(t.trType))
 
     def clear_details(self) -> None:
         for key in ['txt_detail_bank', 'txt_detail_acc_no', 'txt_detail_acc_name', 'txt_detail_vs', 'txt_detail_cs', 'txt_detail_ss',
                     'txt_detail_desc', 'txt_detail_sender_msg', 'txt_detail_addressee_msg', 'txt_detail_av1', 'txt_detail_av2', 'txt_detail_av3',
-                    'txt_detail_av4']:
+                    'txt_detail_av4', 'txt_detail_category', 'txt_detail_type']:
             window[key].update('')
             self.window['tbl_detail_tags'].update(values=[])
 
@@ -290,6 +302,30 @@ class Application:
                 sourceType = CsvType(values['lst_source_type'][0])
                 self.transactions = self.csvParser.read_transactions(filename, sourceType)
                 self.reload_transaction_table(reloadFromDB=False)
+
+            elif self.event == 'radio_sig_type':
+                transactionSelected = self.get_selected_transaction()
+                if transactionSelected is None:
+                    continue
+                clsId = transactionSelected.trType
+                self.reload_signature_table(clsId)
+
+            elif self.event == 'radio_sig_cat':
+                transactionSelected = self.get_selected_transaction()
+                if transactionSelected is None:
+                    continue
+                clsId = transactionSelected.category
+                self.reload_signature_table(clsId)
+
+            elif self.event == 'tbl_detail_tags':
+                transactionSelected = self.get_selected_transaction()
+                if transactionSelected is None:
+                    continue
+                if len(self.values['tbl_detail_tags']) == 0:
+                    continue
+                clsId = self.values['tbl_detail_tags'][0]
+
+                self.reload_signature_table(clsId)
 
 if __name__ == '__main__':
     Application().run()

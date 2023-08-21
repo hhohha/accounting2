@@ -15,9 +15,9 @@ class Table(Enum):
     CLASSIFICATIONS = 'classifications'
     TAG_LINKS = 'tag_links'
 
-transactionFieldsSelect = ["id", "dueDate", "amount", "bank", "category", "trType", "writeOffDate", "toAccount", "toAccountName", "originalCurrency", "rate",
-                     "variableSymbol", "constantSymbol", "specificSymbol", "transactionIdentifier", "systemDescription", "senderDescription",
-                     "addresseeDescription", "AV1", "AV2", "AV3", "AV4"]
+transactionFieldsSelect = ["id", "dueDate", "amount", "bank", "category", "trType", "writeOffDate", "toAccount", "toAccountName", "originalAmount",
+                           "originalCurrency", "rate", "variableSymbol", "constantSymbol", "specificSymbol", "transactionIdentifier",
+                           "systemDescription", "senderDescription", "addresseeDescription", "AV1", "AV2", "AV3", "AV4"]
 
 transactionFieldsSave = transactionFieldsSelect + ['signature']
 
@@ -41,23 +41,26 @@ def get_new_id(table: Table) -> int:
     assert isinstance(idx, int) or idx is None, f"invalid new id received from table {table.value}"
     return idx + 1 if isinstance(idx, int) else 0
 
-def add_new_signature(clsId: int, signature: str) -> int:
-    newId = get_new_id(Table.SIGNATURES)
-    sql_query(f'insert into signatures (id, cls_id, value) values ({newId}, {clsId}, "{signature}")')
-    return newId
+# def add_new_signature(clsId: int, signature: str) -> int:
+#     newId = get_new_id(Table.SIGNATURES)
+#     sql_query(f'insert into signatures (id, cls_id, value) values ({newId}, {clsId}, "{signature}")')
+#     return newId
+#
+# def change_signature(idx: int, signature: str) -> None:
+#     sql_query(f'update signatures set value = "{signature}" where id = {idx}')
+#
+# def remove_signature(idx: int) -> None:
+#     sql_query(f'delete from signatures where id = {idx}')
+#
+def get_signatures_of_cls_type(cls: ClsType) -> list:
+    return sql_query(f'select c.id, s.value from classifications c, signatures s where s.cls_id = c.id and c.type = {cls.value}')
 
-def change_signature(idx: int, signature: str) -> None:
-    sql_query(f'update signatures set value = "{signature}" where id = {idx}')
-
-def remove_signature(idx: int) -> None:
-    sql_query(f'delete from signatures where id = {idx}')
+def get_signatures(clsId: int) -> list:
+    return sql_query(f'select id, value from signatures where cls_id = {clsId}')
 
 def get_classifications(cls: Optional[ClsType] = None) -> list:
     filters = f'where type = {cls.value}' if cls is not None else ''
     return sql_query(f'select id, type, name from classifications {filters}')
-
-def get_signatures_of_cls_type(cls: ClsType) -> list:
-    return sql_query(f'select c.id, s.value from classifications c, signatures s where s.cls_id = c.id and c.type = {cls.value}')
 
 def add_new_classification(cls: ClsType, name: str) -> int:
     newId = get_new_id(Table.CLASSIFICATIONS)
