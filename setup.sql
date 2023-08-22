@@ -72,3 +72,8 @@ insert into transactions (id, dueDate, amount, bank, category, trType) values (3
 insert into transactions (id, dueDate, amount, bank, category, trType, av1) values (5, '2015-01-05', 500, 'MB', 6, 3, 'some data');
 insert into tag_links (trans_id, cls_id) values (1, 8);
 insert into tag_links (trans_id, cls_id) values (1, 9);
+insert into signatures (id, cls_id, value) values (1, 1, 'cred');
+insert into signatures (id, cls_id, value) values (2, 4, 'foo');
+insert into signatures (id, cls_id, value) values (3, 4, 'ood');
+insert into signatures (id, cls_id, value) values (4, 9, 'bill');
+insert into signatures (id, cls_id, value) values (5, 9, 'lla');

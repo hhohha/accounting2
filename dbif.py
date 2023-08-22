@@ -56,7 +56,7 @@ def get_signatures_of_cls_type(cls: ClsType) -> list:
     return sql_query(f'select c.id, s.value from classifications c, signatures s where s.cls_id = c.id and c.type = {cls.value}')
 
 def get_signatures(clsId: int) -> list:
-    return sql_query(f'select id, value from signatures where cls_id = {clsId}')
+    return sql_query(f'select id, cls_id, value from signatures where cls_id = {clsId}')
 
 def get_classifications(cls: Optional[ClsType] = None) -> list:
     filters = f'where type = {cls.value}' if cls is not None else ''

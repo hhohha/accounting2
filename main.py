@@ -89,9 +89,6 @@ class Application:
         self.window['txt_total_amount'].update(display_amount(sumCredit + sumDebit))
         self.window['txt_total_cnt'].update(len(self.transactions))
 
-    def reload_signature_table(self, clsId: int) -> None:
-        self.window['tbl_signatures'].update(values=[self.clsIdToName[tid] for tid in dbif.get_signatures(clsId)])
-
     def reload_transaction_table(self, reloadFromDB: bool=True) -> None:
         # if a transaction is selected, remember that row to select it (or the previous one, if deleting) afterward
         lineSelected: Optional[int] = None
@@ -111,6 +108,16 @@ class Application:
             if lineSelected >= 0:
                 self.window['tbl_transactions'].update(select_rows=[lineSelected])
 
+    def clear_signatures_table(self) -> None:
+        self.window['tbl_signatures'].update(values=[])
+
+    def reload_signature_table(self, clsId: int) -> None:
+        self.window['tbl_signatures'].update(values=[name for _, _, name in dbif.get_signatures(clsId)])
+
+    def refresh_tags_table(self, t: Transaction) -> None:
+        self.window['tbl_detail_tags'].update(values=[self.clsIdToName[tid] for tid in t.tags])
+        self.clear_signatures_table()
+
     def show_details(self, t: Transaction) -> None:
         self.clear_details()
         self.window['txt_detail_bank'].update(t.bank)
@@ -126,10 +133,13 @@ class Application:
         self.window['txt_detail_av2'].update(t.AV2)
         self.window['txt_detail_av3'].update(t.AV3)
         self.window['txt_detail_av4'].update(t.AV4)
-        self.window['tbl_detail_tags'].update(values=[self.clsIdToName[tid] for tid in t.tags])
 
         self.window['txt_detail_category'].update(self.get_cls_name(t.category))
         self.window['txt_detail_type'].update(self.get_cls_name(t.trType))
+
+        self.refresh_tags_table(t)
+
+        self.window['radio_sig_type'].reset_group()
 
     def clear_details(self) -> None:
         for key in ['txt_detail_bank', 'txt_detail_acc_no', 'txt_detail_acc_name', 'txt_detail_vs', 'txt_detail_cs', 'txt_detail_ss',
@@ -307,15 +317,15 @@ class Application:
                 transactionSelected = self.get_selected_transaction()
                 if transactionSelected is None:
                     continue
-                clsId = transactionSelected.trType
-                self.reload_signature_table(clsId)
+                typeId = transactionSelected.trType
+                self.reload_signature_table(typeId)
 
             elif self.event == 'radio_sig_cat':
                 transactionSelected = self.get_selected_transaction()
                 if transactionSelected is None:
                     continue
-                clsId = transactionSelected.category
-                self.reload_signature_table(clsId)
+                categoryId = transactionSelected.category
+                self.reload_signature_table(categoryId)
 
             elif self.event == 'tbl_detail_tags':
                 transactionSelected = self.get_selected_transaction()
@@ -323,9 +333,11 @@ class Application:
                     continue
                 if len(self.values['tbl_detail_tags']) == 0:
                     continue
-                clsId = self.values['tbl_detail_tags'][0]
+                lineNo = self.values['tbl_detail_tags'][0]
+                tagName = window['tbl_detail_tags'].get()[lineNo]
+                tagId = self.clsNameToId[(ClsType.TAG, tagName)]
 
-                self.reload_signature_table(clsId)
+                self.reload_signature_table(tagId)
 
 if __name__ == '__main__':
     Application().run()
