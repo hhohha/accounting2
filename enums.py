@@ -13,3 +13,6 @@ class TransactionStatus(Enum):
 class CsvType(Enum):
     KB = 'kb'
     MB = 'mb'
+
+class Settings(Enum):
+    LAST_BACKUP = 'last_backup'

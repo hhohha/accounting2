@@ -1,12 +1,13 @@
 import logging
-from datetime import date
+from datetime import datetime, date, timedelta
 
 import PySimpleGUI as sg
 from typing import Dict, List, Optional, Tuple, Any
 
 import dbif
+from backup import backup_db, restore_db
 from csv_parser import CsvParser
-from enums import ClsType, TransactionStatus, CsvType
+from enums import ClsType, TransactionStatus, CsvType, Settings
 from layout import window
 from transaction import Transaction
 from utils import display_amount
@@ -25,6 +26,8 @@ class Application:
         self.clsIdToName: Dict[Optional[int], str] = {c[0]: c[2] for c in allClassifications}
         self.clsIdToName[None] = 'unknown'
 
+        self.signNameToId: Dict[str, int] = {}
+
         self.clsNameToId: Dict[Tuple[ClsType, str], int] = {}
         for id, clsType, name in allClassifications:
             self.clsNameToId[(ClsType(clsType), name)] = id
@@ -35,6 +38,29 @@ class Application:
         self.window = window
         self.values: Any = None
         self.event: Any = None
+
+        self.refresh_last_backup()
+
+    def get_selected_cls_details(self) -> Optional[int]:
+        if self.values['radio_sig_type'] and self.window['txt_detail_type'].get():
+            return self.clsNameToId[(ClsType.TR_TYPE, self.window['txt_detail_type'].get())]
+        elif self.values['radio_sig_cat'] and self.window['txt_detail_category'].get():
+            return self.clsNameToId[(ClsType.CATEGORY, self.window['txt_detail_category'].get())]
+        elif self.values['tbl_detail_tags']:
+            lineNo = self.values['tbl_detail_tags'][0]
+            tagName = self.window['tbl_detail_tags'].get()[lineNo]
+            return self.clsNameToId[(ClsType.TAG, tagName)]
+        else:
+            sg.popup('No classification selected', title='Error')
+
+    def refresh_last_backup(self) -> None:
+        lastBkp = dbif.get_setting(Settings.LAST_BACKUP.value)
+        textColor = 'white'
+        if lastBkp is None:
+            lastBkp = 'never'
+        if datetime.now() - datetime.strptime(lastBkp, '%Y-%m-%d') > timedelta(days=90):
+            textColor = 'red'
+        self.window['txt_last_backup'].update(lastBkp, text_color=textColor)
 
     def get_filters(self) -> str:
         print(f'values: {self.values}')
@@ -112,7 +138,8 @@ class Application:
         self.window['tbl_signatures'].update(values=[])
 
     def reload_signature_table(self, clsId: int) -> None:
-        self.window['tbl_signatures'].update(values=[name for _, _, name in dbif.get_signatures(clsId)])
+        self.signNameToId = {x[2]: x[0] for x in dbif.get_signatures(clsId)}
+        self.window['tbl_signatures'].update(values=list(self.signNameToId.keys()))
 
     def refresh_tags_table(self, t: Transaction) -> None:
         self.window['tbl_detail_tags'].update(values=[self.clsIdToName[tid] for tid in t.tags])
@@ -319,6 +346,8 @@ class Application:
                     continue
                 typeId = transactionSelected.trType
                 self.reload_signature_table(typeId)
+                # unselect tags
+                self.window['tbl_detail_tags'].update(select_rows=[])
 
             elif self.event == 'radio_sig_cat':
                 transactionSelected = self.get_selected_transaction()
@@ -326,6 +355,8 @@ class Application:
                     continue
                 categoryId = transactionSelected.category
                 self.reload_signature_table(categoryId)
+                # unselect tags
+                self.window['tbl_detail_tags'].update(select_rows=[])
 
             elif self.event == 'tbl_detail_tags':
                 transactionSelected = self.get_selected_transaction()
@@ -337,7 +368,84 @@ class Application:
                 tagName = window['tbl_detail_tags'].get()[lineNo]
                 tagId = self.clsNameToId[(ClsType.TAG, tagName)]
 
+                self.window['radio_sig_cat'].reset_group()
                 self.reload_signature_table(tagId)
+
+            elif self.event == 'btn_add_sign':
+                if not (clsId := self.get_selected_cls_details()):
+                    continue
+
+                if not (transactionSelected := self.get_selected_transaction()):
+                    logging.warning('Suspicious... adding signature, but No transaction selected')
+                    signatureHint = ''
+                else:
+                    signatureHint = transactionSelected.signature
+
+                event, values = sg.Window('Add signature', [
+                    [sg.Text('Signature')],
+                    [sg.Input(signatureHint, key='txt_signature')],
+                    [sg.OK(), sg.Cancel()]
+                ]).read(close=True)
+
+                if event in ['Cancel', None]:
+                    continue
+
+                signature = values['txt_signature']
+                if len(signature) < 3:
+                    sg.popup('Signature too short', title='Error')
+                    continue
+
+                dbif.add_new_signature(clsId, signature)
+                self.reload_signature_table(clsId)
+            elif self.event == 'btn_remove_sign':
+                if not (clsId := self.get_selected_cls_details()):
+                    continue
+
+                if not self.values['tbl_signatures']:
+                    sg.popup('No signature selected', title='Error')
+                    continue
+                lineNo = self.values['tbl_signatures'][0]
+                sigName = self.window['tbl_signatures'].get()[lineNo]
+
+                try:
+                    sigId = self.signNameToId[sigName]
+                except KeyError:
+                    sg.popup('Invalid signature selected', title='Error')
+                    continue
+                dbif.remove_signature(sigId)
+                self.reload_signature_table(clsId)
+            elif self.event == 'btn_backup':
+                retval = backup_db()
+                if retval == 0:
+                    dbif.set_setting(Settings.LAST_BACKUP.value, str(date.today()))
+                    self.refresh_last_backup()
+                    sg.popup('Backup successful', title='Success')
+                else:
+                    sg.popup(f'Backup failed with error code {retval}', title='Error')
+            elif self.event == 'btn_restore':
+                if sg.popup_ok_cancel('This will remove al data from the DB and replace them with the data from the backup. You sure?', title='Careful!') != 'OK':
+                    continue
+
+                event, values = sg.Window('Get file', [
+                    [sg.Text('Backup file')],
+                    [sg.Input(key='txt_csv_file'), sg.FileBrowse(initial_folder='/home/honza')],
+                    [sg.OK(), sg.Cancel()]
+                ]).read(close=True)
+
+                if event in ['Cancel', None]:
+                    continue
+                if not values['txt_csv_file']:
+                    sg.popup('No file selected', title='Error')
+                    continue
+
+                filename = values['txt_csv_file']
+                retval = restore_db(filename)
+                if retval == 0:
+                    self.reload_transaction_table()
+                    self.refresh_last_backup()
+                    sg.popup('Restore successful', title='Success')
+                else:
+                    sg.popup(f'Restore failed with error code {retval}', title='Error')
 
 if __name__ == '__main__':
     Application().run()

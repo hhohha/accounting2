@@ -2,10 +2,16 @@
 -- use accounting2
 --
 -- mysql -p accounting2 < setup.sql
+drop table if exists settings;
 drop table if exists signatures;
 drop table if exists tag_links;
 drop table if exists transactions;
 drop table if exists classifications;
+
+create table settings (
+    sKey varchar(32) primary key not null,
+    sValue varchar(256)
+);
 
 create table classifications (
     id int primary key,

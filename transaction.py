@@ -53,13 +53,17 @@ class Transaction:
     def __post_init__(self):
         # todo - strip all strings
         if not self.signature:
-            self.signature = ','.join(map(lambda x: x if x is not None else '', [self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
-                                       self.transactionIdentifier, self.systemDescription, self.senderDescription, self.addresseeDescription,
-                                       self.AV1, self.AV2, self.AV3, self.AV4])).lower()
+            self.signature = self.make_signature()
         if self.tags is None:
             self.tags = set()
         else:
             self.tags = {int(t) for t in self.tags.split(',')}
+
+    def make_signature(self) -> str:
+        nonEmptyFields = filter(lambda f: bool(f), [self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
+                                       self.transactionIdentifier, self.systemDescription, self.senderDescription, self.addresseeDescription,
+                                       self.AV1, self.AV2, self.AV3, self.AV4])
+        return ','.join(nonEmptyFields).lower()
 
     def save(self) -> int:
         # TODO: transaction should always have: dueDate, amount, category, trType, bank

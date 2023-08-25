@@ -58,7 +58,8 @@ def get_main_window_layout():
         [sg.Button('Save all', key='btn_save_all'), sg.Button('Save one', key='btn_save_one')],
         [sg.Button('Change type', key='btn_change_type'), sg.Button('Change category', key='btn_change_category')],
         [sg.Button('Load data', key='btn_load_data'), sg.Button('Load from file', key='btn_load_from_file')],
-        [sg.Button('Hide line', key='btn_hide_line'), sg.Button('Remove line from DB', key='btn_remove_line')]
+        [sg.Button('Hide line', key='btn_hide_line'), sg.Button('Remove line from DB', key='btn_remove_line')],
+        [sg.Button('Backup DB', key='btn_backup'), sg.Button('Restore DB', key='btn_restore')]
     ], title='Buttons')
 
     ##### filter frame ########################################################
@@ -83,7 +84,8 @@ def get_main_window_layout():
         [sg.Text('Total credit:'), sg.Text('', key='txt_total_credit')],
         [sg.Text('Total debit:'), sg.Text('', key='txt_total_debit')],
         [sg.Text('Total amount:'), sg.Text('', key='txt_total_amount')],
-        [sg.Text('Transaction count:'), sg.Text('', key='txt_total_cnt')]
+        [sg.Text('Transaction count:'), sg.Text('', key='txt_total_cnt')],
+        [sg.Text('Last backup:'), sg.Text('', key='txt_last_backup')]
     ], title='Summary')
 
     layout = [
@@ -95,4 +97,4 @@ def get_main_window_layout():
 
 layout = get_main_window_layout()
 window = sg.Window('Welcome to accounting', layout, default_element_size=(12, 1), element_padding=(1, 1), return_keyboard_events=True,
-                       resizable=False)
+                       resizable=False, finalize=True)

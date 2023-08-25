@@ -9,6 +9,11 @@ from datetime import date
 if TYPE_CHECKING:
     from transaction import Transaction
 
+DB_HOST = 'localhost'
+DB_USER = 'honza'
+DB_PASSWORD = 'jejda'
+DB_NAME = 'accounting2'
+
 class Table(Enum):
     TRANSACTIONS = 'transactions'
     SIGNATURES = 'signatures'
@@ -21,8 +26,19 @@ transactionFieldsSelect = ["id", "dueDate", "amount", "bank", "category", "trTyp
 
 transactionFieldsSave = transactionFieldsSelect + ['signature']
 
+def get_setting(key: str) -> Optional[str]:
+    retval = sql_query(f'select sValue from settings where sKey = "{key}"')
+    if len(retval) == 0:
+        return None
+    else:
+        return retval[0][0]
+
+def set_setting(key: str, value: str) -> None:
+    sql_query(f'delete from settings where sKey = "{key}"')
+    sql_query(f'insert into settings (sKey, sValue) values ("{key}", "{value}")')
+
 def sql_query(sql: str) -> list:
-    mydb = mysql.connector.connect(host='localhost', user='honza', password='jejda', database='accounting2')
+    mydb = mysql.connector.connect(host=DB_HOST, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
 
     myCursor = mydb.cursor()
     myCursor.execute(sql)
@@ -41,17 +57,14 @@ def get_new_id(table: Table) -> int:
     assert isinstance(idx, int) or idx is None, f"invalid new id received from table {table.value}"
     return idx + 1 if isinstance(idx, int) else 0
 
-# def add_new_signature(clsId: int, signature: str) -> int:
-#     newId = get_new_id(Table.SIGNATURES)
-#     sql_query(f'insert into signatures (id, cls_id, value) values ({newId}, {clsId}, "{signature}")')
-#     return newId
-#
-# def change_signature(idx: int, signature: str) -> None:
-#     sql_query(f'update signatures set value = "{signature}" where id = {idx}')
-#
-# def remove_signature(idx: int) -> None:
-#     sql_query(f'delete from signatures where id = {idx}')
-#
+def add_new_signature(clsId: int, signature: str) -> int:
+    newId = get_new_id(Table.SIGNATURES)
+    sql_query(f'insert into signatures (id, cls_id, value) values ({newId}, {clsId}, "{signature}")')
+    return newId
+
+def remove_signature(idx: int) -> None:
+    sql_query(f'delete from signatures where id = {idx}')
+
 def get_signatures_of_cls_type(cls: ClsType) -> list:
     return sql_query(f'select c.id, s.value from classifications c, signatures s where s.cls_id = c.id and c.type = {cls.value}')
 
