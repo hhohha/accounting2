@@ -1,7 +1,7 @@
 from datetime import date
 
 def display_amount(amount: int) -> str:
-    return f'{amount // 100},{amount % 100:02d}'
+    return f'{"-" if amount < 0 else ""}{abs(amount) // 100},{abs(amount) % 100:02d}'
 
 def value_or_null(obj, name: str, commas: bool = True) -> str:
     optionalComma = ', ' if commas else ''

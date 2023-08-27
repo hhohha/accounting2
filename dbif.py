@@ -123,7 +123,7 @@ def get_transactions(filters: str = '') -> list:
         from transactions as t left join tag_links as tl on tl.trans_id = t.id
         {filters}
         group by t.id
-        order by t.dueDate
+        order by t.dueDate, t.id
     ''')
 
 def get_tags(trId: int) -> list:

@@ -14,9 +14,8 @@ from utils import display_amount
 
 
 # TODOs
-#   signatures in gui
+#   detect duplicates
 #   signatures analysis
-#   backup and restore
 #   gui improvements
 #   improve filters (credit/debit, clear filters, last month)
 
@@ -58,13 +57,12 @@ class Application:
         textColor = 'white'
         if lastBkp is None:
             lastBkp = 'never'
-        if datetime.now() - datetime.strptime(lastBkp, '%Y-%m-%d') > timedelta(days=90):
+            textColor = 'red'
+        elif datetime.now() - datetime.strptime(lastBkp, '%Y-%m-%d') > timedelta(days=90):
             textColor = 'red'
         self.window['txt_last_backup'].update(lastBkp, text_color=textColor)
 
     def get_filters(self) -> str:
-        print(f'values: {self.values}')
-
         filters: List[str] = []
 
         if self.values['filter_date_from']:
@@ -446,6 +444,12 @@ class Application:
                     sg.popup('Restore successful', title='Success')
                 else:
                     sg.popup(f'Restore failed with error code {retval}', title='Error')
+
+            elif self.event == 'btn_clear_filters':
+                for key in ['filter_date_from', 'filter_date_to', 'filter_amount_min', 'filter_amount_max', 'filter_desc']:
+                    self.window[key].update('')
+                for key in ['filter_type', 'filter_category', 'filter_tags']:
+                    self.window[key].set_value([])
 
 if __name__ == '__main__':
     Application().run()
