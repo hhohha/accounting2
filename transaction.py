@@ -7,9 +7,10 @@ import datetime
 import dbif
 from enums import TransactionStatus
 from signatures import signatures
+from utils import remove_extra_spaces
 
 TR_TYPE_CREDIT = 5
-CATEGORY_CREDIT = 6
+CATEGORY_CREDIT = 16
 
 @dataclass
 class Tag:
@@ -51,7 +52,12 @@ class Transaction:
     signature: str = field(default='', init=False, repr=False)
 
     def __post_init__(self):
-        # todo - strip all strings
+        for fieldName in ['systemDescription', 'senderDescription', 'addresseeDescription', 'AV1', 'AV2', 'AV3', 'AV4']:
+            field = getattr(self, fieldName)
+            if field is not None:
+                newField = remove_extra_spaces(field).strip()
+                setattr(self, fieldName, newField if newField else None)
+
         if not self.signature:
             self.signature = self.make_signature()
         if self.tags is None:
@@ -86,38 +92,34 @@ class Transaction:
 
         return self.id
 
-    #def load_tags(self) -> None:
-    #    #self.tags = list(map(lambda x: x[0], dbif.get_tags(self.id)))
-    #    assert self.id is not None, "cannot get tags from DB: transaction id not saved in DB"
-    #    self.tags = list(map(lambda t: t[0], dbif.get_tags(self.id)))
+    def delete(self):
+        dbif.remove_transaction(self.id)
 
     def find_classifications(self) -> None:
         self.find_tr_type()
         self.find_category()
-        #self.find_tags()
+        self.find_tags()
 
     def find_tr_type(self) -> None:
         if self.amount > 0:
             self.trType = TR_TYPE_CREDIT
             return
-        for trTypeId, signature in signatures.tr_types.items():
+
+        for signature, trTypeId in signatures.tr_types.items():
             if signature in self.signature:
                 self.trType = trTypeId
                 return
 
     def find_category(self) -> None:
         if self.amount > 0:
-            self.trType = CATEGORY_CREDIT
+            self.category = CATEGORY_CREDIT
             return
-        for categoryId, signature in signatures.categories.items():
+        for signature, categoryId in signatures.categories.items():
             if signature.lower() in self.signature:
                 self.category = categoryId
                 return
 
-    def delete(self):
-        dbif.remove_transaction(self.id)
-
-#    def find_tags(self) -> None:
-#        for tagId, signature in signatures.tags.items():
-#            if signature.lower() in self.signature:
-#                self.tags.append(Tag(tagId, signature))
+    def find_tags(self) -> None:
+        for signature, tagId in signatures.tags.items():
+            if signature.lower() in self.signature:
+                self.tags.add(tagId)

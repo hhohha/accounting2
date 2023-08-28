@@ -66,7 +66,7 @@ def remove_signature(idx: int) -> None:
     sql_query(f'delete from signatures where id = {idx}')
 
 def get_signatures_of_cls_type(cls: ClsType) -> list:
-    return sql_query(f'select c.id, s.value from classifications c, signatures s where s.cls_id = c.id and c.type = {cls.value}')
+    return sql_query(f'select s.value, c.id from classifications c, signatures s where s.cls_id = c.id and c.type = {cls.value}')
 
 def get_signatures(clsId: int) -> list:
     return sql_query(f'select id, cls_id, value from signatures where cls_id = {clsId}')

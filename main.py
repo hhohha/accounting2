@@ -98,6 +98,8 @@ class Application:
         trTypeName = self.get_cls_name(transaction.trType)
         categoryName = self.get_cls_name(transaction.category)
         description = ','.join(filter(lambda f: f is not None, [transaction.AV1, transaction.AV2, transaction.AV3, transaction.AV4])) # type: ignore
+        if not description:
+            description = ','.join(filter(lambda f: f is not None, [transaction.systemDescription, transaction.senderDescription, transaction.addresseeDescription])) # type: ignore
 
         return [transaction.id, transaction.dueDate, display_amount(transaction.amount), description, trTypeName, categoryName, transaction.status.value]
 
@@ -319,7 +321,7 @@ class Application:
             elif self.event == 'btn_load_from_file':
                 event, values = sg.Window('Get file', [
                     [sg.Text('Data file')],
-                    [sg.Input(key='txt_csv_file'), sg.FileBrowse(initial_folder='/home/honza')],
+                    [sg.Input(key='txt_csv_file'), sg.FileBrowse(initial_folder='/home/honza/projects/accounting2/test_data')],
                     [sg.Text('Source')],
                     [sg.Listbox(values=['kb', 'mb'], size=(30, 3), key='lst_source_type')], [sg.OK(), sg.Cancel()]
                 ]).read(close=True)
@@ -336,6 +338,8 @@ class Application:
                 filename = values['txt_csv_file']
                 sourceType = CsvType(values['lst_source_type'][0])
                 self.transactions = self.csvParser.read_transactions(filename, sourceType)
+                for t in self.transactions:
+                    t.find_classifications()
                 self.reload_transaction_table(reloadFromDB=False)
 
             elif self.event == 'radio_sig_type':

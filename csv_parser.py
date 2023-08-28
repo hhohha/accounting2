@@ -71,10 +71,6 @@ class CsvParser:
             logging.warning(f'Error parsing line {fields}: {e}')
             return None
 
-
-    def line_to_transaction_mb(self, line: str) -> Transaction:
-        pass
-
     def read_transactions(self, filename: str, sourceType: CsvType) -> List[Transaction]:
         self.sourceType = sourceType
         self.transactions.clear()

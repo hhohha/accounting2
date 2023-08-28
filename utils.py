@@ -14,5 +14,5 @@ def value_or_null(obj, name: str, commas: bool = True) -> str:
         strValue = str(value)
     return f'{optionalComma}{strValue}'
 
-
-
+def remove_extra_spaces(s: str) -> str:
+    return ' '.join(s.split())
