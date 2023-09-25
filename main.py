@@ -14,9 +14,11 @@ from utils import display_amount
 
 
 # TODOs
+# save all button
 #   detect duplicates
-#   signatures analysis
-#   gui improvements
+#   gui improvements - fix window size
+#                    - alignment of widgets and spaces between them
+
 #   improve filters (credit/debit, clear filters, last month)
 
 class Application:
@@ -51,6 +53,7 @@ class Application:
             return self.clsNameToId[(ClsType.TAG, tagName)]
         else:
             sg.popup('No classification selected', title='Error')
+            return None
 
     def refresh_last_backup(self) -> None:
         lastBkp = dbif.get_setting(Settings.LAST_BACKUP.value)
@@ -87,7 +90,7 @@ class Application:
 
         return f' where {" and ".join(filters)}' if filters else ''
 
-    def get_cls_name(self, clsId: int) -> str:
+    def get_cls_name(self, clsId: Optional[int]) -> str:
         try:
             return self.clsIdToName[clsId]
         except KeyError:
@@ -347,18 +350,20 @@ class Application:
                 if transactionSelected is None:
                     continue
                 typeId = transactionSelected.trType
-                self.reload_signature_table(typeId)
-                # unselect tags
-                self.window['tbl_detail_tags'].update(select_rows=[])
+                if typeId is not None:
+                    self.reload_signature_table(typeId)
+                    # unselect tags
+                    self.window['tbl_detail_tags'].update(select_rows=[])
 
             elif self.event == 'radio_sig_cat':
                 transactionSelected = self.get_selected_transaction()
                 if transactionSelected is None:
                     continue
                 categoryId = transactionSelected.category
-                self.reload_signature_table(categoryId)
-                # unselect tags
-                self.window['tbl_detail_tags'].update(select_rows=[])
+                if categoryId is not None:
+                    self.reload_signature_table(categoryId)
+                    # unselect tags
+                    self.window['tbl_detail_tags'].update(select_rows=[])
 
             elif self.event == 'tbl_detail_tags':
                 transactionSelected = self.get_selected_transaction()

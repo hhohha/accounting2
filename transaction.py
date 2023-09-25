@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Optional, Set
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 import datetime
 
 import dbif
@@ -46,27 +46,30 @@ class Transaction:
     AV2: Optional[str] = None                       # in details
     AV3: Optional[str] = None                       # in details
     AV4: Optional[str] = None                       # in details
+    initTags: InitVar[Optional[str]] = None         # tags are passed as str, but need to be converted to set in __post_init__
 
-    tags: Set[int] | str | None = field(default=None, repr=False)
+    tags: Set[int] = field(init=False, repr=False)
     status: TransactionStatus = field(default=TransactionStatus.SAVED, repr=False)
     signature: str = field(default='', init=False, repr=False)
 
-    def __post_init__(self):
+    def __post_init__(self, initTags: str | None):
+
+        print(f'initTags: {initTags}')
         for fieldName in ['systemDescription', 'senderDescription', 'addresseeDescription', 'AV1', 'AV2', 'AV3', 'AV4']:
-            field = getattr(self, fieldName)
-            if field is not None:
-                newField = remove_extra_spaces(field).strip()
+            fld = getattr(self, fieldName)
+            if fld is not None:
+                newField = remove_extra_spaces(fld).strip()
                 setattr(self, fieldName, newField if newField else None)
 
         if not self.signature:
             self.signature = self.make_signature()
-        if self.tags is None:
+        if initTags is None:
             self.tags = set()
         else:
-            self.tags = {int(t) for t in self.tags.split(',')}
+            self.tags = {int(t) for t in initTags.split(',')}
 
     def make_signature(self) -> str:
-        nonEmptyFields = filter(lambda f: bool(f), [self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
+        nonEmptyFields: filter[str] = filter(None, [self.toAccount, self.toAccountName, self.variableSymbol, self.constantSymbol, self.specificSymbol,
                                        self.transactionIdentifier, self.systemDescription, self.senderDescription, self.addresseeDescription,
                                        self.AV1, self.AV2, self.AV3, self.AV4])
         return ','.join(nonEmptyFields).lower()
@@ -105,7 +108,7 @@ class Transaction:
             self.trType = TR_TYPE_CREDIT
             return
 
-        for signature, trTypeId in signatures.tr_types.items():
+        for trTypeId, signature in signatures.tr_types.items():
             if signature in self.signature:
                 self.trType = trTypeId
                 return
@@ -114,12 +117,13 @@ class Transaction:
         if self.amount > 0:
             self.category = CATEGORY_CREDIT
             return
-        for signature, categoryId in signatures.categories.items():
+        for categoryId, signature in signatures.categories.items():
             if signature.lower() in self.signature:
                 self.category = categoryId
                 return
 
     def find_tags(self) -> None:
-        for signature, tagId in signatures.tags.items():
+        assert isinstance(self.tags, set), "transaction tags are not a set"
+        for tagId, signature in signatures.tags.items():
             if signature.lower() in self.signature:
                 self.tags.add(tagId)

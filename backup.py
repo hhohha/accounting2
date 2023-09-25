@@ -1,4 +1,5 @@
-import time, os
+import time
+import os
 from dbif import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
 
 # TODO - maybe encrypt the backup and send to cloud, keep last 3 backups
