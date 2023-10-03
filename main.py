@@ -14,12 +14,10 @@ from utils import display_amount
 
 
 # TODOs
-# save all button
+#   save all button
 #   detect duplicates
 #   gui improvements - fix window size
 #                    - alignment of widgets and spaces between them
-
-#   improve filters (credit/debit, clear filters, last month)
 
 class Application:
     def __init__(self):
@@ -65,19 +63,56 @@ class Application:
             textColor = 'red'
         self.window['txt_last_backup'].update(lastBkp, text_color=textColor)
 
-    def get_filters(self) -> str:
+    def clear_filters(self) -> None:
+        for key in ['filter_date_from', 'filter_date_to', 'filter_amount_min', 'filter_amount_max', 'filter_desc']:
+            self.window[key].update('')
+        for key in ['filter_type', 'filter_category', 'filter_tags']:
+            self.window[key].set_value([])
+        self.window['radio_filter_both'].update(True)
+
+    def get_filters(self) -> Optional[str]:
         filters: List[str] = []
 
-        if self.values['filter_date_from']:
-            filters.append(f't.dueDate >= "{self.values["filter_date_from"]}"')
-        if self.values['filter_date_to']:
-            filters.append(f't.dueDate <= "{self.values["filter_date_to"]}"')
-        if self.values['filter_amount_min']:
-            filters.append(f't.amount >= {self.values["filter_amount_min"]}')
-        if self.values['filter_amount_max']:
-            filters.append(f't.amount <= {self.values["filter_amount_max"]}')
+        if dateFrom := self.window['filter_date_from'].get():
+            try:
+                datetime.strptime(dateFrom, '%Y-%m-%d')
+            except ValueError:
+                sg.popup(f'Invalid date format in start date: {dateFrom}', title='Error')
+                return None
+            filters.append(f't.dueDate >= "{dateFrom}"')
+
+        if dateTo := self.window['filter_date_to'].get():
+            try:
+                datetime.strptime(dateTo, '%Y-%m-%d')
+            except ValueError:
+                sg.popup(f'Invalid date format in end date: {dateTo}', title='Error')
+                return None
+            filters.append(f't.dueDate <= "{dateTo}"')
+
+        if amountMin := self.values['filter_amount_min']:
+            try:
+                if int(amountMin) < 0:
+                    raise ValueError
+            except ValueError:
+                sg.popup(f'Invalid minimum amount: {amountMin}', title='Error')
+                return None
+            filters.append(f'abs(t.amount) >= 100 * {amountMin}')
+
+        if amountMax := self.values['filter_amount_max']:
+            try:
+                if int(amountMax) < 0:
+                    raise ValueError
+            except ValueError as e:
+                sg.popup(f'Invalid maximum amount: {amountMax}', title='Error')
+                return None
+            filters.append(f'abs(t.amount) <= 100 * {amountMax}')
+
         if self.values['filter_desc']:
             filters.append(f't.signature like "%{self.values["filter_desc"]}%"')
+        if self.values['radio_filter_cred']:
+            filters.append(f't.amount >= 0')
+        if self.values['radio_filter_deb']:
+            filters.append(f't.amount < 0')
         if self.values['filter_type']:
             idLst = list(map(lambda t: self.clsNameToId[ClsType.TR_TYPE, t], self.values["filter_type"]))
             filters.append(f't.trType in ({",".join(map(str, idLst))})')
@@ -125,7 +160,10 @@ class Application:
             lineSelected = self.values['tbl_transactions'][0]
 
         if reloadFromDB:
-            self.transactions = [Transaction(*t) for t in dbif.get_transactions(self.get_filters())]
+            filters = self.get_filters()
+            if filters is None:
+                return
+            self.transactions = [Transaction(*t) for t in dbif.get_transactions(filters)]
         self.window['tbl_transactions'].update(values=[self.transaction_to_table_row(t) for t in self.transactions])
 
         self.recalculate_summaries()
@@ -454,11 +492,40 @@ class Application:
                 else:
                     sg.popup(f'Restore failed with error code {retval}', title='Error')
 
+            elif self.event == 'btn_filter_this_month':
+                firstDayInMonth = date.today().replace(day=1)
+                lastDayInMonth = (firstDayInMonth + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+                self.window['filter_date_from'].update(firstDayInMonth)
+                self.window['filter_date_to'].update(lastDayInMonth)
+                self.reload_transaction_table()
+
+            elif self.event == 'btn_filter_prev_month':
+                # if the filter_date_from and filter_date_to are not empty and from the same month, move them to the previous month
+                if (dateFrom := self.window['filter_date_from'].get()) and (dateTo := self.window['filter_date_to'].get()):
+                    dateFrom = datetime.strptime(dateFrom, '%Y-%m-%d').date()
+                    dateTo = datetime.strptime(dateTo, '%Y-%m-%d').date()
+                    if dateFrom.month == dateTo.month:
+                        firstDayInMonth = dateFrom.replace(day=1)
+                        lastDayInPrevMonth = firstDayInMonth - timedelta(days=1)
+                        firstDayInPrevMonth = lastDayInPrevMonth.replace(day=1)
+                        self.window['filter_date_from'].update(firstDayInPrevMonth)
+                        self.window['filter_date_to'].update(lastDayInPrevMonth)
+                        self.reload_transaction_table()
+
+            elif self.event == 'btn_filter_next_month':
+                # if the filter_date_from and filter_date_to are not empty and from the same month, move them to the next month
+                if (dateFrom := self.window['filter_date_from'].get()) and (dateTo := self.window['filter_date_to'].get()):
+                    dateFrom = datetime.strptime(dateFrom, '%Y-%m-%d').date()
+                    dateTo = datetime.strptime(dateTo, '%Y-%m-%d').date()
+                    if dateFrom.month == dateTo.month:
+                        firstDayInMonth = dateFrom.replace(day=1)
+                        firstDayInNextMonth = (firstDayInMonth + timedelta(days=31)).replace(day=1)
+                        lastDayInNextMonth = (firstDayInNextMonth + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+                        self.window['filter_date_from'].update(firstDayInNextMonth)
+                        self.window['filter_date_to'].update(lastDayInNextMonth)
+                        self.reload_transaction_table()
             elif self.event == 'btn_clear_filters':
-                for key in ['filter_date_from', 'filter_date_to', 'filter_amount_min', 'filter_amount_max', 'filter_desc']:
-                    self.window[key].update('')
-                for key in ['filter_type', 'filter_category', 'filter_tags']:
-                    self.window[key].set_value([])
+                self.clear_filters()
 
 if __name__ == '__main__':
     Application().run()

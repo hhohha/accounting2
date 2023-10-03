@@ -72,6 +72,16 @@ def get_main_window_layout():
             sg.Text('Description:'), sg.Input(key='filter_desc')
         ],
         [
+            sg.Radio('Only credit', 'filter_credit_debit', key='radio_filter_cred'),
+            sg.Radio('Only debit', 'filter_credit_debit', key='radio_filter_deb'),
+            sg.Radio('Both', 'filter_credit_debit', key='radio_filter_both', default=True)
+        ],
+        [
+            sg.Button('<', key='btn_filter_prev_month'),
+            sg.Button('This month', key='btn_filter_this_month'),
+            sg.Button('>', key='btn_filter_next_month')
+        ],
+        [
             sg.Text('Type:'), sg.Listbox(values=tr_types, key='filter_type', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
             sg.Text('Category:'), sg.Listbox(values=categories, key='filter_category', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
             sg.Text('Tag:'), sg.Listbox(values=tags, key='filter_tags', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED)
@@ -88,13 +98,11 @@ def get_main_window_layout():
         [sg.Text('Last backup:'), sg.Text('', key='txt_last_backup')]
     ], title='Summary')
 
-    layout = [
+    return [
         [frameTransactionTable, frameDetails],
         [frameButtons, frameFilter, frameSummary]
     ]
 
-    return layout
-
 layout = get_main_window_layout()
 window = sg.Window('Welcome to accounting', layout, default_element_size=(12, 1), element_padding=(1, 1), return_keyboard_events=True,
-                       resizable=False, finalize=True)
+                       resizable=False, finalize=True).finalize()

@@ -53,8 +53,6 @@ class Transaction:
     signature: str = field(default='', init=False, repr=False)
 
     def __post_init__(self, initTags: str | None):
-
-        print(f'initTags: {initTags}')
         for fieldName in ['systemDescription', 'senderDescription', 'addresseeDescription', 'AV1', 'AV2', 'AV3', 'AV4']:
             fld = getattr(self, fieldName)
             if fld is not None:
