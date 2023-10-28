@@ -16,8 +16,6 @@ from utils import display_amount
 # TODOs
 #   save all button
 #   detect duplicates
-#   gui improvements - fix window size
-#                    - alignment of widgets and spaces between them
 
 class Application:
     def __init__(self):

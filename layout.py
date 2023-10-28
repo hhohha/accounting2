@@ -46,31 +46,28 @@ def get_main_window_layout():
         [sg.Text('', key='txt_detail_av2')],
         [sg.Text('', key='txt_detail_av3')],
         [sg.Text('', key='txt_detail_av4')]
-    ], title='Transaction details')
+    ], title='Transaction details', expand_x=True, p = ((0, 0), (10, 0)))
 
     frameTags = sg.Frame(layout=[
         [sg.Table(values=[[]], key='tbl_detail_tags', headings=['tags'], auto_size_columns=False, num_rows=5, col_widths=[25], enable_events=True)],
         [sg.Button('Remove tag', key='btn_remove_tag'), sg.Button('Add tag', key='btn_add_tag')],
-    ], title='Tags')
+    ], title='Tags', expand_x=True, p=((0, 0), (60, 100)))
 
-    frameCategory = sg.Frame(layout=[
-        [sg.Radio('Category signatures', 'grp_cls', enable_events=True, key='radio_sig_cat')],
-        [sg.Text('', key='txt_detail_category')]
-    ], title='Category')
-
-    frameTrType = sg.Frame(layout=[
-        [sg.Radio('Type signatures', 'grp_cls', enable_events=True, key='radio_sig_type')],
-        [sg.Text('', key='txt_detail_type')]
-    ], title='Type')
-
-    sep = sg.HorizontalSeparator()
 
     frameSignatures = sg.Frame(layout=[
         [sg.Table(values=[[]], key='tbl_signatures', headings=['signature'], auto_size_columns=False, num_rows=10, col_widths=[25])],
         [sg.Button('Add signature', key='btn_add_sign'), sg.Button('Remove signature', key='btn_remove_sign')]
-    ], title='Signatures')
+    ], title='Signatures', expand_x=True)
 
-    frameDetails = sg.Frame(layout=[[frameTransactionDetails], [frameTags], [frameCategory], [frameTrType], [sep], [frameSignatures]], title='', pad=10, border_width=5, expand_x=True, expand_y=True)
+    frameDetails = sg.Frame(layout=[
+        [frameTransactionDetails],
+        [frameTags],
+        [sg.Radio('Category signatures', 'grp_cls', enable_events=True, key='radio_sig_cat')],
+        [sg.Text('', key='txt_detail_category')],
+        [sg.Radio('Type signatures', 'grp_cls', enable_events=True, key='radio_sig_type')],
+        [sg.Text('', key='txt_detail_type')],
+        [frameSignatures]
+    ], title='', pad=10, border_width=5, expand_x=True, expand_y=True)
 
     ##### filter frame ########################################################
     frameFilter = sg.Frame(layout=[
@@ -116,4 +113,6 @@ def get_main_window_layout():
 
 layout = get_main_window_layout()
 window = sg.Window('Welcome to accounting', layout, default_element_size=(12, 1), element_padding=(1, 1), return_keyboard_events=True,
-                   resizable=False, finalize=True).finalize()
+                   resizable=False, finalize=True)
+                   #resizable=False, finalize=True, size=(2220, 1355))
+print(f'size: {window.size}')
