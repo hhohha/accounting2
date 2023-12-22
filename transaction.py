@@ -106,22 +106,25 @@ class Transaction:
             self.trType = TR_TYPE_CREDIT
             return
 
-        for trTypeId, signature in signatures.tr_types.items():
-            if signature in self.signature:
-                self.trType = trTypeId
-                return
+        for sig, trTypeId in signatures.tr_types.items():
+            try:
+                if sig.lower() in self.signature:
+                    self.trType = trTypeId
+                    return
+            except TypeError as e:
+                raise e
 
     def find_category(self) -> None:
         if self.amount > 0:
             self.category = CATEGORY_CREDIT
             return
-        for categoryId, signature in signatures.categories.items():
-            if signature.lower() in self.signature:
+        for sig, categoryId in signatures.categories.items():
+            if sig.lower() in self.signature:
                 self.category = categoryId
                 return
 
     def find_tags(self) -> None:
         assert isinstance(self.tags, set), "transaction tags are not a set"
-        for tagId, signature in signatures.tags.items():
-            if signature.lower() in self.signature:
+        for sig, tagId in signatures.tags.items():
+            if sig.lower() in self.signature:
                 self.tags.add(tagId)

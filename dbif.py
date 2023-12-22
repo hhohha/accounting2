@@ -12,7 +12,10 @@ if TYPE_CHECKING:
 DB_HOST = 'localhost'
 DB_USER = 'honza'
 DB_PASSWORD = 'jejda'
-DB_NAME = 'accounting2'
+
+DB_NAME_REAL = 'accounting2'
+DB_NAME_TEST = 'accounting2_test'
+DB_NAME = DB_NAME_REAL
 
 class Table(Enum):
     TRANSACTIONS = 'transactions'

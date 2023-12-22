@@ -49,13 +49,13 @@ def get_main_window_layout():
     ], title='Transaction details', expand_x=True, p = ((0, 0), (10, 0)))
 
     frameTags = sg.Frame(layout=[
-        [sg.Table(values=[[]], key='tbl_detail_tags', headings=['tags'], auto_size_columns=False, num_rows=5, col_widths=[25], enable_events=True)],
+        [sg.Table(values=[[]], key='tbl_detail_tags', headings=['tags'], auto_size_columns=False, num_rows=5, col_widths=[35], enable_events=True)],
         [sg.Button('Remove tag', key='btn_remove_tag'), sg.Button('Add tag', key='btn_add_tag')],
     ], title='Tags', expand_x=True, p=((0, 0), (60, 100)))
 
 
     frameSignatures = sg.Frame(layout=[
-        [sg.Table(values=[[]], key='tbl_signatures', headings=['signature'], auto_size_columns=False, num_rows=10, col_widths=[25])],
+        [sg.Table(values=[[]], key='tbl_signatures', headings=['signature'], auto_size_columns=False, num_rows=10, col_widths=[35])],
         [sg.Button('Add signature', key='btn_add_sign'), sg.Button('Remove signature', key='btn_remove_sign')]
     ], title='Signatures', expand_x=True)
 
@@ -84,6 +84,11 @@ def get_main_window_layout():
             sg.Radio('Only debit', 'filter_credit_debit', key='radio_filter_deb'),
             sg.Radio('Both', 'filter_credit_debit', key='radio_filter_both', default=True)
         ],
+        [
+            sg.Radio('KB', 'filter_bank', key='radio_filter_bank_kb'),
+            sg.Radio('MB', 'filter_bank', key='radio_filter_bank_mb'),
+            sg.Radio('Both', 'filter_bank', key='radio_filter_bank_all', default=True)
+        ],
         [HorizontalSeparator(p=((0, 0), (10, 10)))],
         [
             sg.Text('Type:'), sg.Listbox(values=tr_types, key='filter_type', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
@@ -100,11 +105,15 @@ def get_main_window_layout():
         ]
     ], title='Filters', p=((0, 0), (20, 0)))
 
-    ##### backup frame #######################################################
+    ##### options frame #######################################################
     frameBkp = sg.Frame(layout=[
+        [
+            sg.Radio('Test DB', 'grp_db', key='radio_db_test', enable_events=True),
+            sg.Radio('Real DB', 'grp_db', key='radio_db_real', default=True, enable_events=True)
+        ],
         [sg.Button('Backup DB', key='btn_backup'), sg.Button('Restore DB', key='btn_restore')],
         [sg.Text('Last backup:'), sg.Text('', key='txt_last_backup', p = ((0, 0), (5, 0)))]
-    ], title='Backup', p=((100, 0), (290, 0)))
+    ], title='Options', p=((100, 0), (290, 0)))
 
     return [
         [frameTransactionTable, frameDetails],

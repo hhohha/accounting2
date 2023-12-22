@@ -85,19 +85,9 @@ class CsvParser:
 
     def parse_data(self, lines: List[str]) -> None:
         if self.sourceType == CsvType.KB:
-            if len(lines) >= 18 and lines[2] == '\n' and lines[16] == '\n':
-                lines = lines[18:]
-                parse_func = self.line_to_transaction_kb
-            else:
-                logging.warning(f'File seems to have an unexpected format')
-                return
+            parse_func = self.line_to_transaction_kb
         elif self.sourceType == CsvType.MB:
-            if len(lines) >= 37 and lines[35] == '\n' and lines[33] == '\n':
-                lines = lines[37:]
-                parse_func = self.line_to_transaction_mb
-            else:
-                logging.warning(f'File seems to have an unexpected format')
-                return
+            parse_func = self.line_to_transaction_mb
         else:
             assert False, f'Unknown source type: {self.sourceType}'
 

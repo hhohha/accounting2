@@ -14,6 +14,10 @@ from utils import display_amount
 
 
 # TODOs
+#   put sql_query into a try-except block
+#   switch between test DB and real DB - reload filters when switching
+#   re-analyze current transaction button
+#   on signature add/remove reload signatures
 #   save all button
 #   detect duplicates
 
@@ -67,6 +71,7 @@ class Application:
         for key in ['filter_type', 'filter_category', 'filter_tags']:
             self.window[key].set_value([])
         self.window['radio_filter_both'].update(True)
+        self.window['radio_filter_bank_all'].update(True)
 
     def get_filters(self) -> Optional[str]:
         filters: List[str] = []
@@ -111,6 +116,12 @@ class Application:
             filters.append(f't.amount >= 0')
         if self.values['radio_filter_deb']:
             filters.append(f't.amount < 0')
+
+        if self.values['radio_filter_bank_kb']:
+            filters.append(f't.bank = "kb"')
+        if self.values['radio_filter_bank_mb']:
+            filters.append(f't.bank = "mb"')
+
         if self.values['filter_type']:
             idLst = list(map(lambda t: self.clsNameToId[ClsType.TR_TYPE, t], self.values["filter_type"]))
             filters.append(f't.trType in ({",".join(map(str, idLst))})')
@@ -178,7 +189,7 @@ class Application:
 
     def reload_signature_table(self, clsId: int) -> None:
         self.signNameToId = {x[2]: x[0] for x in dbif.get_signatures(clsId)}
-        self.window['tbl_signatures'].update(values=list(self.signNameToId.keys()))
+        self.window['tbl_signatures'].update(values=[[item] for item in list(self.signNameToId.keys())])
 
     def refresh_tags_table(self, t: Transaction) -> None:
         self.window['tbl_detail_tags'].update(values=[self.clsIdToName[tid] for tid in t.tags])
@@ -291,6 +302,8 @@ class Application:
         while True:
             self.event, self.values = self.window.read()
 
+            print(f'event: {self.event}\nvalues: {self.values}')
+
             if self.event in (None, 'exit'):
                 break
             elif self.event == 'btn_load_data':
@@ -349,6 +362,10 @@ class Application:
                 transactionSelected.save()
                 transactionSelected.status = TransactionStatus.SAVED
                 self.reload_transaction_table(reloadFromDB=False)
+                # select next line
+                if (lineNo := self.get_selected_line_no()) is not None:
+                    if lineNo + 1 < len(self.transactions):
+                        self.window['tbl_transactions'].update(select_rows=[lineNo + 1])
 
             elif self.event == 'btn_hide_line':
                 if (lineNo := self.get_selected_line_no()) is None:
@@ -360,7 +377,7 @@ class Application:
             elif self.event == 'btn_load_from_file':
                 event, values = sg.Window('Get file', [
                     [sg.Text('Data file')],
-                    [sg.Input(key='txt_csv_file'), sg.FileBrowse(initial_folder='/home/honza/projects/accounting2/test_data')],
+                    [sg.Input(key='txt_csv_file'), sg.FileBrowse(initial_folder='/home/honza/projects/accounting2/data')],
                     [sg.Text('Source')],
                     [sg.Listbox(values=['kb', 'mb'], size=(30, 3), key='lst_source_type')], [sg.OK(), sg.Cancel()]
                 ]).read(close=True)
@@ -524,6 +541,18 @@ class Application:
                         self.reload_transaction_table()
             elif self.event == 'btn_clear_filters':
                 self.clear_filters()
+
+            elif self.event == 'radio_db_test':
+                dbif.DB_NAME = dbif.DB_NAME_TEST
+                # TODO - reload filters
+                self.transactions = []
+                self.reload_transaction_table(reloadFromDB=False)
+
+            elif self.event == 'radio_db_real':
+                dbif.DB_NAME = dbif.DB_NAME_REAL
+                # TODO - reload filters
+                self.transactions = []
+                self.reload_transaction_table(reloadFromDB=False)
 
 if __name__ == '__main__':
     Application().run()
