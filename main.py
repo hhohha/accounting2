@@ -14,9 +14,11 @@ from utils import display_amount
 
 
 # TODOs
+#   solve signatures reload when switching DBs or changing signatures    <<<<!!!
+#   when adding tag, allow fulltext search
+#   disable backup and restore for test DB
 #   put sql_query into a try-except block
-#   switch between test DB and real DB - reload filters when switching
-#   re-analyze current transaction button
+#   add a note field to transactions
 #   on signature add/remove reload signatures
 #   save all button
 #   detect duplicates
@@ -40,7 +42,17 @@ class Application:
         self.values: Any = None
         self.event: Any = None
 
+        self.refresh_cls_filters()
         self.refresh_last_backup()
+
+    def refresh_cls_filters(self):
+        tr_types = list(map(lambda t: t[2], dbif.get_classifications(ClsType.TR_TYPE)))
+        categories = list(map(lambda t: t[2], dbif.get_classifications(ClsType.CATEGORY)))
+        tags = sorted(list(map(lambda t: t[2], dbif.get_classifications(ClsType.TAG))))
+
+        self.window['filter_type'].update(values=tr_types)
+        self.window['filter_category'].update(values=categories)
+        self.window['filter_tags'].update(values=tags)
 
     def get_selected_cls_details(self) -> Optional[int]:
         if self.values['radio_sig_type'] and self.window['txt_detail_type'].get():
@@ -49,7 +61,7 @@ class Application:
             return self.clsNameToId[(ClsType.CATEGORY, self.window['txt_detail_category'].get())]
         elif self.values['tbl_detail_tags']:
             lineNo = self.values['tbl_detail_tags'][0]
-            tagName = self.window['tbl_detail_tags'].get()[lineNo]
+            tagName = self.window['tbl_detail_tags'].get()[lineNo][0]
             return self.clsNameToId[(ClsType.TAG, tagName)]
         else:
             sg.popup('No classification selected', title='Error')
@@ -192,7 +204,7 @@ class Application:
         self.window['tbl_signatures'].update(values=[[item] for item in list(self.signNameToId.keys())])
 
     def refresh_tags_table(self, t: Transaction) -> None:
-        self.window['tbl_detail_tags'].update(values=[self.clsIdToName[tid] for tid in t.tags])
+        self.window['tbl_detail_tags'].update(values=[[self.clsIdToName[tid]] for tid in t.tags])
         self.clear_signatures_table()
 
     def show_details(self, t: Transaction) -> None:
@@ -275,7 +287,7 @@ class Application:
             tagId = dbif.add_new_classification(ClsType.TAG, tagValue)
             self.clsIdToName[tagId] = tagValue
             self.clsNameToId[(ClsType.TAG, tagValue)] = tagId
-            self.window['filter_tags'].update(values=list(map(lambda t: t[2], dbif.get_classifications(ClsType.TAG))))
+            self.window['filter_tags'].update(values=sorted(list(map(lambda t: t[2], dbif.get_classifications(ClsType.TAG)))))
         elif len(values['existing_tag']) > 0:
             tagValue = values['existing_tag'][0]
             tagId = self.clsNameToId[(ClsType.TAG, tagValue)]
@@ -302,7 +314,7 @@ class Application:
         while True:
             self.event, self.values = self.window.read()
 
-            print(f'event: {self.event}\nvalues: {self.values}')
+            #print(f'event: {self.event}\nvalues: {self.values}')
 
             if self.event in (None, 'exit'):
                 break
@@ -345,7 +357,7 @@ class Application:
                     continue
 
                 lineNo = self.values['tbl_detail_tags'][0]
-                tagName = window['tbl_detail_tags'].get()[lineNo]
+                tagName = window['tbl_detail_tags'].get()[lineNo][0]
                 tagId = self.clsNameToId[(ClsType.TAG, tagName)]
 
                 assert isinstance(transactionSelected.tags, set), "transaction tags are in a wrong format"
@@ -425,7 +437,7 @@ class Application:
                 if len(self.values['tbl_detail_tags']) == 0:
                     continue
                 lineNo = self.values['tbl_detail_tags'][0]
-                tagName = window['tbl_detail_tags'].get()[lineNo]
+                tagName = window['tbl_detail_tags'].get()[lineNo][0]
                 tagId = self.clsNameToId[(ClsType.TAG, tagName)]
 
                 self.window['radio_sig_cat'].reset_group()
@@ -465,7 +477,7 @@ class Application:
                     sg.popup('No signature selected', title='Error')
                     continue
                 lineNo = self.values['tbl_signatures'][0]
-                sigName = self.window['tbl_signatures'].get()[lineNo]
+                sigName = self.window['tbl_signatures'].get()[lineNo][0]
 
                 try:
                     sigId = self.signNameToId[sigName]
@@ -544,15 +556,28 @@ class Application:
 
             elif self.event == 'radio_db_test':
                 dbif.DB_NAME = dbif.DB_NAME_TEST
-                # TODO - reload filters
                 self.transactions = []
                 self.reload_transaction_table(reloadFromDB=False)
+                self.__init__()
 
             elif self.event == 'radio_db_real':
                 dbif.DB_NAME = dbif.DB_NAME_REAL
-                # TODO - reload filters
                 self.transactions = []
                 self.reload_transaction_table(reloadFromDB=False)
+                self.__init__()
+
+            elif self.event == 'btn_racalc_classes':
+                if (transactionSelected := self.get_selected_transaction()) is None:
+                    sg.popup('No transaction selected', title='Error')
+                    continue
+                print(f'transaction before: {transactionSelected}')
+                transactionSelected.find_classifications()
+                print(f'transaction after: {transactionSelected}')
+                if transactionSelected.status == TransactionStatus.SAVED:
+                    transactionSelected.status = TransactionStatus.MODIFIED
+
+                self.reload_transaction_table(reloadFromDB=False)
+
 
 if __name__ == '__main__':
     Application().run()

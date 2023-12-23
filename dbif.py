@@ -111,7 +111,6 @@ def save_new_transaction(t: Transaction) -> int:
     t.id = get_new_id(Table.TRANSACTIONS)
 
     columnNames, columnValues = parse_fields(t, transactionFieldsSave)
-    print(f'QUERY: insert into transactions ({columnNames}) values ({columnValues})')
 
     sql_query(f'insert into transactions ({columnNames}) values ({columnValues})')
     return t.id

@@ -6,21 +6,18 @@ from enums import ClsType
 
 
 def get_main_window_layout():
-    tr_types = list(map(lambda t: t[2], dbif.get_classifications(ClsType.TR_TYPE)))
-    categories = list(map(lambda t: t[2], dbif.get_classifications(ClsType.CATEGORY)))
-    tags = list(map(lambda t: t[2], dbif.get_classifications(ClsType.TAG)))
-
     ##### main table frame ####################################################
     transactionsTable = sg.Table(values = [[]], key='tbl_transactions', headings=['id', 'date', 'amount', 'message', 'type', 'category', 'status'],
                                  auto_size_columns=False, num_rows=65, col_widths=[5, 12, 10, 100, 20, 20, 10], enable_events = True)
 
     frameButtons = sg.Frame(layout=[
-        [sg.Button('Save one', key='btn_save_one', p=((0, 20), (0, 0))),
-         sg.Button('Change type', key='btn_change_type', p=((0, 20), (0, 0))),
-         sg.Button('Change category', key='btn_change_category', p=((0, 20), (0, 0))),
-         sg.Button('Hide line', key='btn_hide_line', p=((0, 20), (0, 0))),
-         sg.Button('Remove line from DB', key='btn_remove_line', p=((0, 20), (0, 0))),
-         sg.Button('Load from file', key='btn_load_from_file', p=((0, 130), (0, 0))),
+        [sg.Button('Save one', key='btn_save_one', p=((0, 15), (0, 0))),
+         sg.Button('Change type', key='btn_change_type', p=((0, 15), (0, 0))),
+         sg.Button('Change category', key='btn_change_category', p=((0, 15), (0, 0))),
+         sg.Button('Hide line', key='btn_hide_line', p=((0, 15), (0, 0))),
+         sg.Button('Remove line from DB', key='btn_remove_line', p=((0, 15), (0, 0))),
+         sg.Button('Load from file', key='btn_load_from_file', p=((0, 15), (0, 0))),
+         sg.Button('Recalc classes', key='btn_racalc_classes', p=((0, 40), (0, 0))),
 
          sg.Text('Total credit:'), sg.Text('', key='txt_total_credit', p=((0, 25), (0, 0))),
          sg.Text('Total debit:'), sg.Text('', key='txt_total_debit', p=((0, 25), (0, 0))),
@@ -52,7 +49,6 @@ def get_main_window_layout():
         [sg.Table(values=[[]], key='tbl_detail_tags', headings=['tags'], auto_size_columns=False, num_rows=5, col_widths=[35], enable_events=True)],
         [sg.Button('Remove tag', key='btn_remove_tag'), sg.Button('Add tag', key='btn_add_tag')],
     ], title='Tags', expand_x=True, p=((0, 0), (60, 100)))
-
 
     frameSignatures = sg.Frame(layout=[
         [sg.Table(values=[[]], key='tbl_signatures', headings=['signature'], auto_size_columns=False, num_rows=10, col_widths=[35])],
@@ -91,9 +87,9 @@ def get_main_window_layout():
         ],
         [HorizontalSeparator(p=((0, 0), (10, 10)))],
         [
-            sg.Text('Type:'), sg.Listbox(values=tr_types, key='filter_type', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
-            sg.Text('Category:'), sg.Listbox(values=categories, key='filter_category', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
-            sg.Text('Tag:'), sg.Listbox(values=tags, key='filter_tags', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED)
+            sg.Text('Type:'), sg.Listbox(values=[], key='filter_type', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
+            sg.Text('Category:'), sg.Listbox(values=[], key='filter_category', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED),
+            sg.Text('Tag:'), sg.Listbox(values=[], key='filter_tags', size=(25,10), select_mode=sg.LISTBOX_SELECT_MODE_EXTENDED)
         ],
         [HorizontalSeparator(p=((0, 0), (10, 10)))],
         [
@@ -122,6 +118,6 @@ def get_main_window_layout():
 
 layout = get_main_window_layout()
 window = sg.Window('Welcome to accounting', layout, default_element_size=(12, 1), element_padding=(1, 1), return_keyboard_events=True,
-                   resizable=False, finalize=True)
+                   resizable=False, finalize=True, location=(80, 0))
                    #resizable=False, finalize=True, size=(2220, 1355))
 print(f'size: {window.size}')
