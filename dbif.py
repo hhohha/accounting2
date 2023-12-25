@@ -83,6 +83,9 @@ def add_new_classification(cls: ClsType, name: str) -> int:
     sql_query(f'insert into classifications (id, type, name) values ({newId}, {cls.value}, "{name}")')
     return newId
 
+def find_transaction_by_identifier(identifier: str) -> bool:
+    return len(sql_query(f'select id from transactions where transactionIdentifier = "{identifier}"')) > 0
+
 def parse_fields(t: Transaction, fields: List[str]) -> Tuple[str, str]:
     columnNames: List[str] = []
     columnValues: List[str] = []

@@ -8,7 +8,7 @@ from enums import ClsType
 def get_main_window_layout():
     ##### main table frame ####################################################
     transactionsTable = sg.Table(values = [[]], key='tbl_transactions', headings=['id', 'date', 'amount', 'message', 'type', 'category', 'status'],
-                                 auto_size_columns=False, num_rows=65, col_widths=[5, 12, 10, 100, 20, 20, 10], enable_events = True)
+                                 auto_size_columns=False, num_rows=60, col_widths=[5, 12, 10, 100, 20, 20, 10], enable_events = True)
 
     frameButtons = sg.Frame(layout=[
         [sg.Button('Save one', key='btn_save_one', p=((0, 15), (0, 0))),
@@ -23,6 +23,10 @@ def get_main_window_layout():
          sg.Text('Total debit:'), sg.Text('', key='txt_total_debit', p=((0, 25), (0, 0))),
          sg.Text('Total amount:'), sg.Text('', key='txt_total_amount', p=((0, 25), (0, 0))),
          sg.Text('Transaction count:'), sg.Text('', key='txt_total_cnt')
+        ],
+        [
+            sg.Button('Save all', key='btn_save_all', p=((0, 15), (0, 0))),
+            sg.Button('Misc purchase', key='btn_misc_purchase', p=((0, 15), (0, 0)))
         ]
     ], title='',expand_x=True)
 

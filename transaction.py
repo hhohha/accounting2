@@ -96,6 +96,9 @@ class Transaction:
     def delete(self):
         dbif.remove_transaction(self.id)
 
+    def is_duplicate(self) -> bool:
+        return dbif.find_transaction_by_identifier(self.transactionIdentifier)
+
     def find_classifications(self) -> None:
         self.find_tr_type()
         self.find_category()
@@ -128,3 +131,7 @@ class Transaction:
         for sig, tagId in signatures.tags.items():
             if sig.lower() in self.signature:
                 self.tags.add(tagId)
+
+    @staticmethod
+    def reload_signatures():
+        signatures.load()

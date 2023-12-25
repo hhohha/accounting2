@@ -14,14 +14,13 @@ from utils import display_amount
 
 
 # TODOs
-#   solve signatures reload when switching DBs or changing signatures    <<<<!!!
 #   when adding tag, allow fulltext search
 #   disable backup and restore for test DB
 #   put sql_query into a try-except block
 #   add a note field to transactions
-#   on signature add/remove reload signatures
-#   save all button
+#   save all button, misc purchase button
 #   detect duplicates
+#   one signature for category and several tags
 
 class Application:
     def __init__(self):
@@ -371,6 +370,11 @@ class Application:
                 if (transactionSelected := self.get_selected_transaction()) is None:
                     sg.popup('No transaction selected', title='Error')
                     continue
+
+                if transactionSelected.status == TransactionStatus.DUPLICATE:
+                    if sg.popup_ok_cancel('Transaction identifier already exists in the DB. You sure you want to save it anyway?', title='Careful!') != 'OK':
+                        continue
+
                 transactionSelected.save()
                 transactionSelected.status = TransactionStatus.SAVED
                 self.reload_transaction_table(reloadFromDB=False)
@@ -408,6 +412,8 @@ class Application:
                 self.transactions = self.csvParser.read_transactions(filename, sourceType)
                 for t in self.transactions:
                     t.find_classifications()
+                    if t.is_duplicate():
+                        t.status = TransactionStatus.DUPLICATE
                 self.reload_transaction_table(reloadFromDB=False)
 
             elif self.event == 'radio_sig_type':
@@ -469,6 +475,8 @@ class Application:
 
                 dbif.add_new_signature(clsId, signature)
                 self.reload_signature_table(clsId)
+                Transaction.reload_signatures()
+
             elif self.event == 'btn_remove_sign':
                 if not (clsId := self.get_selected_cls_details()):
                     continue
@@ -486,6 +494,8 @@ class Application:
                     continue
                 dbif.remove_signature(sigId)
                 self.reload_signature_table(clsId)
+                Transaction.reload_signatures()
+
             elif self.event == 'btn_backup':
                 retval = backup_db()
                 if retval == 0:
@@ -559,25 +569,55 @@ class Application:
                 self.transactions = []
                 self.reload_transaction_table(reloadFromDB=False)
                 self.__init__()
+                Transaction.reload_signatures()
 
             elif self.event == 'radio_db_real':
                 dbif.DB_NAME = dbif.DB_NAME_REAL
                 self.transactions = []
                 self.reload_transaction_table(reloadFromDB=False)
                 self.__init__()
+                Transaction.reload_signatures()
 
             elif self.event == 'btn_racalc_classes':
                 if (transactionSelected := self.get_selected_transaction()) is None:
                     sg.popup('No transaction selected', title='Error')
                     continue
-                print(f'transaction before: {transactionSelected}')
                 transactionSelected.find_classifications()
-                print(f'transaction after: {transactionSelected}')
                 if transactionSelected.status == TransactionStatus.SAVED:
                     transactionSelected.status = TransactionStatus.MODIFIED
 
                 self.reload_transaction_table(reloadFromDB=False)
 
+            elif self.event == 'btn_save_all':
+                savedCnt, notSavedCnt = 0, 0
+                for t in self.transactions:
+                    if t.status == TransactionStatus.NEW:
+                        if t.trType is not None and t.category is not None:
+                            t.save()
+                            t.status = TransactionStatus.SAVED
+                            savedCnt += 1
+                        else:
+                            notSavedCnt += 1
+                self.reload_transaction_table(reloadFromDB=False)
+                sg.popup(f'Saved successfully: {savedCnt}, not saved: {notSavedCnt}', title='Save all')
+
+            elif self.event == 'btn_misc_purchase':
+                if (transactionSelected := self.get_selected_transaction()) is None:
+                    sg.popup('No transaction selected', title='Error')
+                    continue
+
+                typeId = 'misc purchase'
+                try:
+                    newType = self.clsNameToId[(ClsType.CATEGORY, typeId)]
+                except KeyError:
+                    sg.popup('misc purchase category not found', title='Error')
+                    continue
+
+                transactionSelected.category = newType
+                if transactionSelected.status == TransactionStatus.SAVED:
+                    transactionSelected.status = TransactionStatus.MODIFIED
+
+                self.reload_transaction_table(reloadFromDB=False)
 
 if __name__ == '__main__':
     Application().run()
