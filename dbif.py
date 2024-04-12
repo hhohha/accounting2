@@ -92,7 +92,7 @@ def parse_fields(t: Transaction, fields: List[str]) -> Tuple[str, str]:
 
     for field in fields:
         value = getattr(t, field)
-        if not value:
+        if not isinstance(value, int) and not value:
             continue
         elif isinstance(value, str):
             value = value.strip()
