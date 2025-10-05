@@ -76,7 +76,7 @@ def get_signatures(clsId: int) -> list:
 
 def get_classifications(cls: Optional[ClsType] = None) -> list:
     filters = f'where type = {cls.value}' if cls is not None else ''
-    return sql_query(f'select id, type, name from classifications {filters}')
+    return sql_query(f'select id, type, name, active from classifications {filters}')
 
 def add_new_classification(cls: ClsType, name: str) -> int:
     newId = get_new_id(Table.CLASSIFICATIONS)

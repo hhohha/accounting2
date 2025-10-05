@@ -16,7 +16,8 @@ create table settings (
 create table classifications (
     id int primary key,
     type int,
-    name varchar(256)
+    name varchar(256),
+    active boolean
 );
 
 create table signatures (

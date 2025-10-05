@@ -26,7 +26,7 @@ def get_main_window_layout():
         ],
         [
             sg.Button('Save all', key='btn_save_all', p=((0, 15), (0, 0))),
-            sg.Button('Misc purchase', key='btn_misc_purchase', p=((0, 15), (0, 0)))
+            sg.Button('Regular', key='btn_regular', p=((0, 15), (0, 0)))
         ]
     ], title='',expand_x=True)
 
@@ -102,6 +102,7 @@ def get_main_window_layout():
             sg.Button('This month', key='btn_filter_this_month'),
             sg.Button('>', key='btn_filter_next_month', p= ((10, 50), (10, 10))),
             sg.Button('Clear filters', key='btn_clear_filters'),
+            sg.Checkbox('Display inactive categories', key='chk_display_inactive_ctg', enable_events=True)
         ]
     ], title='Filters', p=((0, 0), (20, 0)))
 

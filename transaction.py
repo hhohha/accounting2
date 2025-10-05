@@ -128,9 +128,10 @@ class Transaction:
 
     def find_tags(self) -> None:
         assert isinstance(self.tags, set), "transaction tags are not a set"
-        for sig, tagId in signatures.tags.items():
+        for sig, tagIdLst in signatures.tags.items():
             if sig.lower() in self.signature:
-                self.tags.add(tagId)
+                for tagId in tagIdLst:
+                    self.tags.add(tagId)
 
     @staticmethod
     def reload_signatures():

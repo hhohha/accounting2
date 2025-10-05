@@ -14,12 +14,16 @@ from utils import display_amount
 
 
 # TODOs
+#   from 1.1. 2025 stop using categories: groceries, car, clothes, misc etc.
+#   instead, use regular and irregular, have these take over signatures
+#   add a column display_in_filter to classification and display only those in filter
+#   remove misc category button, instead have regular category
+#
+#################################################
 #   when adding tag, allow fulltext search
 #   disable backup and restore for test DB
 #   put sql_query into a try-except block
 #   add a note field to transactions
-#   save all button, misc purchase button
-#   detect duplicates
 #   one signature for category and several tags
 
 class Application:
@@ -31,7 +35,7 @@ class Application:
         self.signNameToId: Dict[str, int] = {}
 
         self.clsNameToId: Dict[Tuple[ClsType, str], int] = {}
-        for id, clsType, name in allClassifications:
+        for id, clsType, name, active in allClassifications:
             self.clsNameToId[(ClsType(clsType), name)] = id
 
         self.csvParser = CsvParser()
@@ -46,12 +50,16 @@ class Application:
 
     def refresh_cls_filters(self):
         tr_types = list(map(lambda t: t[2], dbif.get_classifications(ClsType.TR_TYPE)))
-        categories = list(map(lambda t: t[2], dbif.get_classifications(ClsType.CATEGORY)))
+        if self.window['chk_display_inactive_ctg'].get(): # TODO - improve this
+            categories = list(map(lambda t: t[2], dbif.get_classifications(ClsType.CATEGORY)))
+        else:
+            categories = [ctg_data[2] for ctg_data in dbif.get_classifications(ClsType.CATEGORY) if ctg_data[3]]
         tags = sorted(list(map(lambda t: t[2], dbif.get_classifications(ClsType.TAG))))
 
         self.window['filter_type'].update(values=tr_types)
         self.window['filter_category'].update(values=categories)
         self.window['filter_tags'].update(values=tags)
+        print(f'categories: {len(categories)}')
 
     def get_selected_cls_details(self) -> Optional[int]:
         if self.values['radio_sig_type'] and self.window['txt_detail_type'].get():
@@ -450,7 +458,7 @@ class Application:
                 self.reload_signature_table(tagId)
 
             elif self.event == 'btn_add_sign':
-                if not (clsId := self.get_selected_cls_details()):
+                if (clsId := self.get_selected_cls_details()) is None:
                     continue
 
                 if not (transactionSelected := self.get_selected_transaction()):
@@ -601,12 +609,12 @@ class Application:
                 self.reload_transaction_table(reloadFromDB=False)
                 sg.popup(f'Saved successfully: {savedCnt}, not saved: {notSavedCnt}', title='Save all')
 
-            elif self.event == 'btn_misc_purchase':
+            elif self.event == 'btn_regular':
                 if (transactionSelected := self.get_selected_transaction()) is None:
                     sg.popup('No transaction selected', title='Error')
                     continue
 
-                typeId = 'misc purchase'
+                typeId = 'regular'
                 try:
                     newType = self.clsNameToId[(ClsType.CATEGORY, typeId)]
                 except KeyError:
@@ -618,6 +626,8 @@ class Application:
                     transactionSelected.status = TransactionStatus.MODIFIED
 
                 self.reload_transaction_table(reloadFromDB=False)
+            elif self.event == 'chk_display_inactive_ctg':
+                self.refresh_cls_filters()
 
 if __name__ == '__main__':
     Application().run()

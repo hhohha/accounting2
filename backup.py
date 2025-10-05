@@ -2,7 +2,7 @@ import time
 import os
 from dbif import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
 
-# TODO - maybe encrypt the backup and send to cloud, keep last 3 backups
+# TODO - encrypt the backup and send to cloud
 def backup_db() -> int:
     currentTime = time.strftime('%Y-%m-%d')
     BACKUP_DIR = '/home/honza/projects/accounting2/backups'
