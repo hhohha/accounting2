@@ -38,6 +38,10 @@ class CsvParser:
             return None
 
     def line_to_transaction_kb(self, line: str) -> Optional[Transaction]:
+        def parse_amount(amount_str: str) -> int:
+            s = amount_str.strip().replace(',', '.')
+            return int(round(float(s) * 100))
+
         fields = list(map(lambda l: l.strip('"'), line.split(self.delimiter)))
         if len(fields) < 19:
             logging.warning(f'Line {line} has only {len(fields)} fields, expected 19')
@@ -45,25 +49,25 @@ class CsvParser:
         try:
             return Transaction(
                 id = None,
-                dueDate = datetime.strptime(fields[0], '%d.%m.%Y').date(),
-                writeOffDate = datetime.strptime(fields[1], '%d.%m.%Y').date() if fields[1] else None,
+                dueDate = datetime.strptime(fields[1], '%d.%m.%Y').date(),
+                writeOffDate = datetime.strptime(fields[0], '%d.%m.%Y').date() if fields[0] else None,
                 toAccount = fields[2],
                 toAccountName = fields[3],
-                amount = int(fields[4].replace('.', '').replace(',', '')),
-                originalAmount = int(fields[5].replace('.', '').replace(',', '')) if fields[5] else None,
-                originalCurrency = fields[6],
-                rate = float(fields[7].replace(',', '.')) if fields[6] else None,
-                variableSymbol = fields[8],
-                constantSymbol = fields[9],
-                specificSymbol = fields[10],
-                transactionIdentifier = fields[11],
-                systemDescription = fields[12],
-                senderDescription = fields[13],
-                addresseeDescription = fields[14],
+                amount = parse_amount(fields[4]),
+                originalAmount =  parse_amount(fields[6]) if fields[6] else None,
+                originalCurrency = fields[7],
+                rate = float(fields[8].replace(',', '.')) if fields[8] else None,
+                variableSymbol = fields[9],
+                constantSymbol = fields[10],
+                specificSymbol = fields[11],
+                transactionIdentifier = fields[12],
+                systemDescription = fields[13],
+                senderDescription = fields[14],
+                addresseeDescription = None,
                 AV1 = fields[15],
-                AV2 = fields[16],
-                AV3 = fields[17],
-                AV4 = fields[18],
+                AV2 = None,
+                AV3 = None,
+                AV4 = None,
                 bank = 'KB',
                 status = TransactionStatus.NEW
             )

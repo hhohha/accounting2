@@ -101,7 +101,7 @@ class Application:
             except ValueError:
                 sg.popup(f'Invalid date format in start date: {dateFrom}', title='Error')
                 return None
-            filters.append(f't.dueDate >= "{dateFrom}"')
+            filters.append(f'COALESCE(t.writeOffDate, t.dueDate) >= "{dateFrom}"')
 
         if dateTo := self.window['filter_date_to'].get():
             try:
@@ -109,7 +109,7 @@ class Application:
             except ValueError:
                 sg.popup(f'Invalid date format in end date: {dateTo}', title='Error')
                 return None
-            filters.append(f't.dueDate <= "{dateTo}"')
+            filters.append(f'COALESCE(t.writeOffDate, t.dueDate) <= "{dateTo}"')
 
         if amountMin := self.values['filter_amount_min']:
             try:
@@ -163,11 +163,11 @@ class Application:
     def transaction_to_table_row(self, transaction: Transaction) -> List[str | int | date | None]:
         trTypeName = self.get_cls_name(transaction.trType)
         categoryName = self.get_cls_name(transaction.category)
-        description = ','.join(filter(lambda f: f is not None, [transaction.AV1, transaction.AV2, transaction.AV3, transaction.AV4])) # type: ignore
+        description = ','.join(filter(lambda f: f is not None, [transaction.AV1, transaction.AV2, transaction.AV3, transaction.AV4, transaction.toAccount, transaction.toAccountName])) # type: ignore
         if not description:
             description = ','.join(filter(lambda f: f is not None, [transaction.systemDescription, transaction.senderDescription, transaction.addresseeDescription])) # type: ignore
 
-        return [transaction.id, transaction.dueDate, display_amount(transaction.amount), description, trTypeName, categoryName, transaction.status.value]
+        return [transaction.id, transaction.writeOffDate or transaction.dueDate, display_amount(transaction.amount), description, trTypeName, categoryName, transaction.status.value]
 
     def recalculate_summaries(self) -> None:
         sumDebit, sumCredit = 0, 0

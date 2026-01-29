@@ -11,6 +11,8 @@ from utils import remove_extra_spaces
 
 TR_TYPE_CREDIT = 5
 CATEGORY_CREDIT = 16
+CATEGORY_REGULAR = 139
+CATEGORY_IRREGULAR = 140
 
 @dataclass
 class Tag:
@@ -125,6 +127,7 @@ class Transaction:
             if sig.lower() in self.signature:
                 self.category = categoryId
                 return
+        self.category = CATEGORY_REGULAR if self.amount > -300000 else CATEGORY_IRREGULAR
 
     def find_tags(self) -> None:
         assert isinstance(self.tags, set), "transaction tags are not a set"
